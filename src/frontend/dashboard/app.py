@@ -55,7 +55,16 @@ st.markdown("""
 
 # Sidebar
 with st.sidebar:
-    st.image("https://via.placeholder.com/150x80?text=SpeakWise", width=200)
+    # Use a custom SVG logo
+    logo_path = "static/images/logo.svg"
+    
+    try:
+        # Try to load the logo
+        st.image(logo_path, width=200)
+    except Exception:
+        # Fallback to text if image loading fails
+        st.markdown("# SpeakWise")
+        
     st.markdown("### System Controls")
     
     # Date filter
@@ -207,31 +216,25 @@ with tab1:
 
 # Call Analytics tab
 with tab2:
-    st.markdown("### Call Distribution by Status")
+    st.markdown("### Call Analytics")
     
-    # Prepare data
-    status_counts = df["status"].value_counts().reset_index()
-    status_counts.columns = ["status", "count"]
+    # Calculate summary metrics
+    total_calls = len(df)
+    completed_calls = len(df[df["status"] == "Completed"])
+    failed_calls = len(df[df["status"] == "Failed"])
     
-    # Create pie chart
-    fig = px.pie(
-        status_counts, 
-        values="count", 
-        names="status",
-        color="status",
-        color_discrete_map={
-            "Completed": "#4CAF50",
-            "In Progress": "#2196F3",
-            "Failed": "#F44336"
-        },
-        hole=0.4
-    )
-    fig.update_layout(
-        height=400,
-        margin=dict(l=20, r=20, t=30, b=20),
-    )
-    st.plotly_chart(fig, use_container_width=True)
+    # Display metrics
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.metric("Total Calls", f"{total_calls}")
+    with col2:
+        st.metric("Completed Calls", f"{completed_calls}", 
+                 delta=f"{completed_calls/total_calls*100:.1f}%" if total_calls > 0 else "0%")
+    with col3:
+        st.metric("Failed Calls", f"{failed_calls}",
+                 delta=f"{failed_calls/total_calls*100:.1f}%" if total_calls > 0 else "0%")
     
+    # Create two larger charts side by side
     col1, col2 = st.columns(2)
     
     with col1:
@@ -244,10 +247,16 @@ with tab2:
             x="hour",
             y="count",
             labels={"count": "Number of Calls", "hour": "Hour of Day"},
+            color_discrete_sequence=["#1E88E5"]
         )
         fig.update_layout(
-            height=400,
+            height=450,
             margin=dict(l=20, r=20, t=30, b=20),
+            xaxis=dict(
+                tickmode='linear',
+                tick0=0,
+                dtick=2
+            )
         )
         st.plotly_chart(fig, use_container_width=True)
         
@@ -263,7 +272,7 @@ with tab2:
             color_discrete_sequence=["#1E88E5"]
         )
         fig.update_layout(
-            height=400,
+            height=450,
             margin=dict(l=20, r=20, t=30, b=20),
         )
         st.plotly_chart(fig, use_container_width=True)

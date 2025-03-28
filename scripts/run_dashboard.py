@@ -22,7 +22,7 @@ def run_dashboard():
     script_dir = Path(__file__).parent
     
     # Path to the dashboard app (now renamed to Home.py)
-    app_path = script_dir.parent / "src" / "frontend" / "dashboard" / "Home.py"
+    app_path = script_dir.parent / "src" / "frontend" / "Home.py"
     
     if not app_path.exists():
         logger.error(f"Dashboard app not found at {app_path}")

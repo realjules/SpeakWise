@@ -1,0 +1,7 @@
+Good news! Your {service_name} document is now ready.
+
+Reference: {reference_number}
+Date Approved: {approval_date}
+
+You can download your document using this link:
+{download_link}

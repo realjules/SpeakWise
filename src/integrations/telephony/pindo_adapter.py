@@ -2,6 +2,7 @@ import logging
 import requests
 from typing import Dict, Any, Optional, Callable
 import json
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -16,14 +17,16 @@ class PindoAdapter:
     VOICE_API_URL = f"{BASE_URL}/v1/voice"
     SMS_API_URL = f"{BASE_URL}/v1/sms"
     
-    def __init__(self, api_key: str):
+    def __init__(self, api_key: str, default_sender: str = "PindoTest"):
         """
         Initialize the Pindo adapter with API credentials.
         
         Args:
             api_key: The Pindo API key
+            default_sender: Default sender ID for SMS messages (default: PindoTest)
         """
         self.api_key = api_key
+        self.default_sender = default_sender or os.environ.get("PINDO_SENDER_ID", "PindoTest")
         self.headers = {
             "Authorization": f"Bearer {api_key}",
             "Content-Type": "application/json"
@@ -206,4 +209,36 @@ class PindoAdapter:
             response.raise_for_status()
         except requests.RequestException as e:
             logger.error(f"Failed to stream audio to call {call_id}: {str(e)}")
+            raise
+            
+    def send_sms(self, to_number: str, message: str, sender_id: Optional[str] = None) -> Dict[str, Any]:
+        """
+        Send an SMS message.
+        
+        Args:
+            to_number: The recipient's phone number
+            message: The message content
+            sender_id: The sender ID (optional, uses default if not provided)
+            
+        Returns:
+            Response from the API
+        """
+        data = {
+            "to": to_number,
+            "text": message,
+            "sender": sender_id or self.default_sender
+        }
+        
+        try:
+            response = requests.post(
+                f"{self.SMS_API_URL}/",
+                headers=self.headers,
+                json=data
+            )
+            response.raise_for_status()
+            result = response.json()
+            logger.info(f"SMS sent to {to_number}, message_id: {result.get('sms_id')}")
+            return result
+        except requests.RequestException as e:
+            logger.error(f"Failed to send SMS to {to_number}: {str(e)}")
             raise

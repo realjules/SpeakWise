@@ -1,0 +1,9 @@
+Task Complete! Your {service_name} request has been submitted successfully!
+
+Transaction ID: {transaction_id}
+Date: {date}
+Amount Paid: {amount} {currency}
+
+The system has completed all necessary forms on your behalf. Your request is now being processed by government officials.
+
+You will receive a confirmation SMS once your request has been approved.

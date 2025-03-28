@@ -5,10 +5,10 @@ This dashboard provides a web-based interface for monitoring and configuring the
 ## Features
 
 - Real-time dashboard for monitoring system activity
-- Call monitoring and management
-- Transaction tracking and analysis
+- Call volume and performance metrics
+- Call status monitoring and analytics
 - System configuration interface
-- User management
+- Hourly distribution and duration analysis
 
 ## Setup and Installation
 
@@ -19,35 +19,42 @@ This dashboard provides a web-based interface for monitoring and configuring the
 
 2. Run the application:
    ```
-   cd src/frontend/dashboard
-   streamlit run app.py
+   # Using the provided script
+   python scripts/run_dashboard.py
+   
+   # Or directly with streamlit
+   cd src/frontend
+   streamlit run Home.py
    ```
 
 3. Access the dashboard in your browser at `http://localhost:8501`
 
 ## Directory Structure
 
-- `app.py` - Main Streamlit application entry point
+- `Home.py` - Main Streamlit application entry point with dashboard overview
 - `pages/` - Additional pages for the dashboard
-  - `call_monitor.py` - Real-time call monitoring
-  - `system_config.py` - System configuration interface
-  - `transaction_log.py` - Payment transaction tracking
+  - `1_Call Monitor.py` - Real-time call monitoring
+  - `2_System Config.py` - System configuration interface
+- `static/` - Images and other static assets
+  - `images/` - Contains logo and other interface images
 
 ## Usage
 
-- The main dashboard shows key metrics and real-time activity
+- The main dashboard shows key metrics and real-time call activity
 - Use the sidebar to navigate between different sections
-- The configuration section allows modifying system settings
-- Call monitor provides real-time updates on active calls
-- Transaction log tracks all payments processed by the system
+- View call volume trends and completion rates on the overview tab
+- Analyze call distributions by hour and duration on the analytics tab
+- The System Config page allows modifying system settings
+- Call Monitor provides real-time updates on active calls
 
 ## Development
 
 To add new pages to the dashboard:
 
 1. Create a new Python file in the `pages/` directory
-2. Implement your Streamlit interface in the file
-3. The file will automatically appear in the sidebar navigation
+2. Name it with a number prefix for proper ordering (e.g. `3_New Page.py`)
+3. Implement your Streamlit interface in the file
+4. The file will automatically appear in the sidebar navigation
 
 ## Notes for Deployment
 

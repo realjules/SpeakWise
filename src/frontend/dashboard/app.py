@@ -8,7 +8,7 @@ import random
 # Set page configuration
 st.set_page_config(
     page_title="Home | SpeakWise",
-    page_icon="📞",
+    page_icon="🏠",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -16,12 +16,23 @@ st.set_page_config(
 # Custom CSS with SpeakWise color palette
 st.markdown("""
 <style>
-    /* Fix sidebar navigation appearance */
-    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] > ul > li:first-child {
-        display: none !important;  /* Hide app in the sidebar */
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
+        width: 100%;
     }
-    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] span:first-letter {
-        text-transform: capitalize !important;  /* Capitalize first letter of page names */
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] ul {
+        padding-left: 0.4rem;
+    }
+    /* Style all navigation items */
+    section[data-testid="stSidebarNav"] div[data-testid="stSidebarNavItems"] > div {
+        padding: 0.2rem 0;
+        border-radius: 0 4px 4px 0;
+    }
+    /* Emphasize current page (Home) */
+    section[data-testid="stSidebarNav"] div[data-testid="stSidebarNavItems"] > div:first-child {
+        background-color: rgba(141, 198, 191, 0.2);
+        border-right: 4px solid #8DC6BF;
+        font-weight: bold;
     }
 
     /* Color palette */

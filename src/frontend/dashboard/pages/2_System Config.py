@@ -12,8 +12,22 @@ st.set_page_config(
 
 st.markdown("""
 <style>
-    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] > ul > li:first-child {
-        display: none !important;
+    /* Sidebar styling */
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
+        width: 100%;
+    }
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] ul {
+        padding-left: 0.4rem;
+    }
+    /* Style Home item */
+    section[data-testid="stSidebarNav"] div[data-testid="stSidebarNavItems"] > div:first-child {
+        font-weight: bold;
+    }
+    /* Style System Config item (highlighted when active) */
+    section[data-testid="stSidebarNav"] div[data-testid="stSidebarNavItems"] > div:nth-child(3) {
+        background-color: rgba(141, 198, 191, 0.2);
+        border-right: 4px solid #8DC6BF;
+        font-weight: bold;
     }
 </style>
 """, unsafe_allow_html=True)

@@ -1,0 +1,19 @@
+{
+  "name": "status_update",
+  "language": "en_US",
+  "components": [
+    {
+      "type": "HEADER",
+      "format": "TEXT",
+      "text": "SpeakWise Status Update"
+    },
+    {
+      "type": "BODY",
+      "text": "Hello {{1}},\n\nThis is an update on your {{2}} service request.\n\nCurrent Status: {{3}}\n\n{{4}}\n\nYou will receive further updates as your request progresses."
+    },
+    {
+      "type": "FOOTER",
+      "text": "For assistance, please call +250780123456"
+    }
+  ]
+}

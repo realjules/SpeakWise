@@ -102,6 +102,14 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] > ul > li:first-child {
+        display: none !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Sidebar - Simplified
 with st.sidebar:
     # Use a custom SVG logo

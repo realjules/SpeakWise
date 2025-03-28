@@ -1,19 +1,25 @@
-#\!/usr/bin/env python3
-
-# Define page names for Streamlit sidebar
-# This file is automatically loaded by Streamlit to rename pages
+#!/usr/bin/env python3
 
 import os
+import streamlit as st
 
+# Define page names for Streamlit sidebar
 PAGES = {
-    "app": "Home",
-    "pages/call_monitor": "Call Monitor",
-    "pages/system_config": "System Config"
+    "app.py": "Home",
+    "pages/call_monitor.py": "Call Monitor",
+    "pages/system_config.py": "System Config"
 }
 
-def rename_pages():
-    for page_ref, display_name in PAGES.items():
-        os.environ[f"STREAMLIT_PAGE_NAME_{page_ref}"] = display_name
+# Set environment variables to rename pages
+for page_path, display_name in PAGES.items():
+    base_name = os.path.basename(page_path).split('.')[0]
+    os.environ[f"STREAMLIT_PAGE_NAME_{base_name}"] = display_name
 
-rename_pages()
-
+# Hide the "app" entry
+st.markdown("""
+<style>
+    [data-testid="stSidebarNav"] ul li:first-child {
+        display: none;
+    }
+</style>
+""", unsafe_allow_html=True)

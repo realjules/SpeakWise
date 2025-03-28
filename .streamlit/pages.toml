@@ -1,3 +1,4 @@
-# Rename the pages as they appear in the sidebar
-call_monitor = "Call Monitor"
-system_config = "System Config"
+[pages]
+Home = "app.py"
+"Call Monitor" = "pages/call_monitor.py"
+"System Config" = "pages/system_config.py"

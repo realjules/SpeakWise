@@ -11,6 +11,14 @@ st.set_page_config(
     layout="wide"
 )
 
+st.markdown("""
+<style>
+    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] > ul > li:first-child {
+        display: none !important;
+    }
+</style>
+""", unsafe_allow_html=True)
+
 # Custom CSS
 st.markdown("""
 <style>

@@ -14,8 +14,9 @@ class PindoAdapter:
     
     # Base URLs for Pindo API
     BASE_URL = "https://api.pindo.io"
-    VOICE_API_URL = f"{BASE_URL}/v1/voice"
+    VOICE_API_URL = f"{BASE_URL}/v1/voice"  # This will be the working endpoint
     SMS_API_URL = f"{BASE_URL}/v1/sms"
+    CALL_EVENTS = ["call.initiated", "call.answered", "call.completed", "call.failed"]
     
     def __init__(self, api_key: str, default_sender: str = "PindoTest"):
         """

@@ -1,0 +1,23 @@
+[theme]
+primaryColor = "#584053"  # Deep Purple
+secondaryBackgroundColor = "#f8f9fa"  # Light gray background
+backgroundColor = "#FFFFFF"  # White
+textColor = "#333333"  # Dark text
+
+[browser]
+gatherUsageStats = false
+
+[server]
+enableStaticServing = true
+
+[ui]
+hideTopBar = false
+
+[runner]
+fastReruns = true
+
+[deprecation]
+showPyplotGlobalUse = false
+
+[navigation]
+app = "Home"

@@ -9,21 +9,17 @@ import random
 st.set_page_config(
     page_title="Home | SpeakWise",
     page_icon="📞",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 # Custom CSS with SpeakWise color palette
 st.markdown("""
 <style>
-    /* Fix sidebar navigation appearance */
-    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] > ul > li:first-child {
-        display: none !important;  /* Hide app in the sidebar */
+    /* Hide app in sidebar */
+    [data-testid="stSidebarNav"] ul li:first-child {
+        display: none;
     }
-    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] span:first-letter {
-        text-transform: capitalize !important;  /* Capitalize first letter of page names */
-    }
-
+    
     /* Color palette */
     :root {
         --primary: #584053;      /* Deep Purple */
@@ -99,6 +95,8 @@ st.markdown("""
         background-color: #8DC6BF !important;  /* Secondary color */
         color: #584053 !important;  /* Primary color */
     }
+    
+    /* Remove CSS that might be causing issues */
 </style>
 """, unsafe_allow_html=True)
 
@@ -135,11 +133,9 @@ with st.sidebar:
     st.markdown('<div style="margin-top: 3rem;"></div>', unsafe_allow_html=True)
     st.button("Refresh Data")
 
-# Header with SpeakWise color palette
-st.markdown('<div style="padding: 1.5rem 0; background-color: #f8f9fa; border-radius: 10px; margin-bottom: 2rem; padding-left: 1.5rem; border-left: 5px solid #8DC6BF;">', unsafe_allow_html=True)
+# Header
 st.markdown('<p class="main-header">SpeakWise Dashboard</p>', unsafe_allow_html=True)
 st.markdown('<p class="sub-header">Real-time monitoring and analytics of the voice assistant system</p>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
 
 # Create tabs
 tab1, tab2 = st.tabs(["Overview", "Call Analytics"])
@@ -205,35 +201,17 @@ with tab1:
     daily_counts = df.groupby(df["timestamp"].dt.date).size().reset_index(name="count")
     daily_counts.columns = ["date", "count"]
     
-    # Create line chart with SpeakWise color palette
+    # Create line chart
     fig = px.line(
         daily_counts, 
         x="date", 
         y="count",
         labels={"count": "Number of Calls", "date": "Date"},
-        markers=True,
-        line_shape="spline",  # Smooth line
-        color_discrete_sequence=["#584053"]  # Primary color
-    )
-    fig.update_traces(
-        marker=dict(size=8, color="#F97B4F"),  # Highlight color for markers
-        line=dict(width=3)  # Thicker line
+        markers=True
     )
     fig.update_layout(
         height=400,
         margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="rgba(0,0,0,0)",  # Transparent background
-        plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot area
-        xaxis=dict(
-            showgrid=True,
-            gridcolor="#f0f0f0",
-            zeroline=False
-        ),
-        yaxis=dict(
-            showgrid=True,
-            gridcolor="#f0f0f0",
-            zeroline=False
-        )
     )
     st.plotly_chart(fig, use_container_width=True)
     
@@ -271,7 +249,7 @@ with tab2:
             x="hour",
             y="count",
             labels={"count": "Number of Calls", "hour": "Hour of Day"},
-            color_discrete_sequence=["#8DC6BF"]  # Secondary color
+            color_discrete_sequence=["#1E88E5"]
         )
         fig.update_layout(
             height=450,
@@ -280,15 +258,6 @@ with tab2:
                 tickmode='linear',
                 tick0=0,
                 dtick=2
-            ),
-            paper_bgcolor="rgba(0,0,0,0)",  # Transparent background
-            plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot area
-            xaxis_title_font={"color": "#584053"},  # Primary color
-            yaxis_title_font={"color": "#584053"},  # Primary color
-            yaxis=dict(
-                showgrid=True,
-                gridcolor="#f0f0f0",
-                zeroline=False
             )
         )
         st.plotly_chart(fig, use_container_width=True)
@@ -302,39 +271,17 @@ with tab2:
             x="duration",
             nbins=20,
             labels={"duration": "Call Duration (seconds)", "count": "Number of Calls"},
-            color_discrete_sequence=["#FCBC66"]  # Accent color
-        )
-        # Add outline to bars
-        fig.update_traces(
-            marker=dict(
-                line=dict(
-                    color="#F97B4F",  # Highlight color
-                    width=1
-                )
-            )
+            color_discrete_sequence=["#1E88E5"]
         )
         fig.update_layout(
             height=450,
             margin=dict(l=20, r=20, t=30, b=20),
-            yaxis_title="Number of Calls",
-            paper_bgcolor="rgba(0,0,0,0)",  # Transparent background
-            plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot area
-            xaxis_title_font={"color": "#584053"},  # Primary color
-            yaxis_title_font={"color": "#584053"},  # Primary color
-            xaxis=dict(
-                showgrid=True,
-                gridcolor="#f0f0f0",
-                zeroline=False
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridcolor="#f0f0f0",
-                zeroline=False
-            )
+            yaxis_title="Number of Calls"
         )
         st.plotly_chart(fig, use_container_width=True)
 
 
 # Footer
 st.markdown("---")
-st.markdown(f'<div style="text-align: center; color: #666666; padding: 1rem 0;">Last updated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}<br>© 2025 <span style="color: #584053; font-weight: bold;">SpeakWise</span></div>', unsafe_allow_html=True)
+st.markdown("Last updated: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))
+st.markdown("© 2025 SpeakWise")

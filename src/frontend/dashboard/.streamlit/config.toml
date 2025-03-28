@@ -1,0 +1,20 @@
+[theme]
+primaryColor = "#584053"
+secondaryBackgroundColor = "#f8f9fa"
+backgroundColor = "#FFFFFF"
+textColor = "#333333"
+
+[browser]
+gatherUsageStats = false
+
+[server]
+enableStaticServing = true
+
+[ui]
+hideTopBar = false
+
+[runner]
+fastReruns = true
+
+[deprecation]
+showPyplotGlobalUse = false

@@ -5,7 +5,7 @@ import streamlit as st
 
 # Define page names for Streamlit sidebar
 PAGES = {
-    "app.py": "Home",
+    "Home.py": "Home",
     "pages/call_monitor.py": "Call Monitor",
     "pages/system_config.py": "System Config"
 }

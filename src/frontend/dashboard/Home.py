@@ -9,8 +9,7 @@ import random
 st.set_page_config(
     page_title="Home | SpeakWise",
     page_icon="🏠",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    layout="wide"
 )
 
 # Custom CSS with SpeakWise color palette
@@ -115,8 +114,8 @@ st.markdown("""
 
 st.markdown("""
 <style>
-    section[data-testid="stSidebar"] [data-testid="stSidebarNav"] > ul > li:first-child {
-        display: none !important;
+    section[data-testid="stSidebar"] [data-testid="stSidebarNavItems"] > div:first-child {
+    display: none !important;
     }
 </style>
 """, unsafe_allow_html=True)

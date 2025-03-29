@@ -66,18 +66,31 @@ def main():
     args = parse_args()
     
     try:
+        # Check if PINDO_API_KEY is set in the environment when SMS is enabled
+        sms_enabled = not args.disable_sms
+        if sms_enabled:
+            import os
+            from dotenv import load_dotenv
+            load_dotenv()
+            pindo_api_key = os.getenv("PINDO_API_KEY", "")
+            if not pindo_api_key or pindo_api_key in ["your_pindo_api_key_here", "PUT_YOUR_ACTUAL_PINDO_API_KEY_HERE"]:
+                print("WARNING: Pindo API key not set or contains placeholder value.")
+                print("Please update the PINDO_API_KEY in your .env file to enable SMS functionality.")
+                print("Continuing with SMS notifications disabled...\n")
+                sms_enabled = False
+                
         # Create the agent with SMS and dashboard options
         agent = BrowserUseAgent(
             model=args.model,
             verbose=args.verbose,
             headless=args.headless,
-            sms_enabled=not args.disable_sms,
+            sms_enabled=sms_enabled,
             update_dashboard=not args.disable_dashboard
         )
         
         # Print service information
         print(f"Starting service: {args.service}")
-        print(f"SMS notifications: {'Disabled' if args.disable_sms else 'Enabled'}")
+        print(f"SMS notifications: {'Disabled' if args.disable_sms or not sms_enabled else 'Enabled'}")
         print(f"Dashboard updates: {'Disabled' if args.disable_dashboard else 'Enabled'}")
         
         # Run the appropriate service

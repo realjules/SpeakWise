@@ -77,8 +77,15 @@ class BrowserUseAgent:
         if self.sms_enabled:
             try:
                 config = Config()
-                self.sms_sender = SMSSender(config)
-                self.logger.info("SMS sender initialized successfully")
+                api_key = config.get("messaging", "api_key", "")
+                
+                # Check if API key is still the placeholder
+                if not api_key or api_key in ["your_pindo_api_key_here", "PUT_YOUR_ACTUAL_PINDO_API_KEY_HERE"]:
+                    self.logger.warning("Pindo API key not set or contains placeholder value. SMS functionality disabled.")
+                    self.sms_enabled = False
+                else:
+                    self.sms_sender = SMSSender(config)
+                    self.logger.info("SMS sender initialized successfully")
             except Exception as e:
                 self.logger.error(f"Failed to initialize SMS sender: {e}")
                 self.sms_enabled = False
@@ -194,8 +201,8 @@ class BrowserUseAgent:
                 except Exception as e:
                     self.logger.error(f"Failed to send SMS notification: {e}")
             
-            # Close the agent properly
-            await agent.close()
+            # Browser-use Agent doesn't have a close method
+            # No explicit close needed
             
             # Return results with additional metadata
             return {

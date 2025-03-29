@@ -258,6 +258,9 @@ class CallHandler:
                 # Inbound call, process it
                 self.process_inbound_call(call_id, phone_number)
                 
+            # Update analytics
+            self._update_call_analytics(call_id, phone_number, "In Progress", event_data.get("service", "General"))
+                
         elif event_type == "call.answered":
             # Call has been answered
             if call_id in self.active_calls:
@@ -276,10 +279,15 @@ class CallHandler:
                 # e.g., sending welcome message
                 self._handle_call_answered(call_id)
                 
+                # Update analytics
+                phone_number = self.active_calls[call_id]["phone_number"]
+                self._update_call_analytics(call_id, phone_number, "In Progress", 
+                                           self.active_calls[call_id].get("metadata", {}).get("service", "General"))
+                
         elif event_type == "call.completed" or event_type == "call.failed":
             # Call has ended
             if call_id in self.active_calls:
-                status = "completed" if event_type == "call.completed" else "failed"
+                status = "Completed" if event_type == "call.completed" else "Failed"
                 self.active_calls[call_id]["status"] = status
                 self.active_calls[call_id]["end_time"] = datetime.now()
                 
@@ -289,10 +297,20 @@ class CallHandler:
                     session_model = self.repository.get_session(session_id)
                     
                     if session_model:
-                        session_model.status = status
+                        session_model.status = status.lower()
                         session_model.end_time = datetime.now()
                         self.repository.save_session(session_model)
-                        
+                
+                # Calculate call duration
+                phone_number = self.active_calls[call_id]["phone_number"]
+                start_time = self.active_calls[call_id]["start_time"]
+                end_time = self.active_calls[call_id]["end_time"]
+                duration_seconds = int((end_time - start_time).total_seconds())
+                service = self.active_calls[call_id].get("metadata", {}).get("service", "General")
+                
+                # Update analytics
+                self._update_call_analytics(call_id, phone_number, status, service, duration_seconds)
+                
                 # Clean up resources
                 self.audio_router.unregister_call(call_id)
                 self.active_calls.pop(call_id, None)
@@ -408,6 +426,48 @@ class CallHandler:
             info["end_time"] = call_info["end_time"].isoformat()
             
         return info
+        
+    def _update_call_analytics(self, call_id: str, phone_number: str, 
+                         status: str, service: str, duration: int = 0) -> None:
+        """
+        Update analytics with call information.
+        
+        Args:
+            call_id: Call ID
+            phone_number: Phone number of caller/callee
+            status: Call status (In Progress, Completed, Failed)
+            service: Service type (e.g., Business Registration)
+            duration: Call duration in seconds (for completed calls)
+        """
+        import threading
+        import requests
+        
+        # Create record
+        record = {
+            "call_id": call_id,
+            "phone": phone_number,
+            "status": status,
+            "timestamp": datetime.now().isoformat() + "Z",
+            "service": service,
+            "duration": duration
+        }
+        
+        # Update analytics in background thread
+        def update_analytics_async():
+            try:
+                # Make request to analytics endpoint
+                analytics_url = "http://localhost:5000/telephony/analytics/call"
+                requests.post(
+                    analytics_url,
+                    json=record,
+                    headers={"Content-Type": "application/json"}
+                )
+                logger.info(f"Call analytics updated for {call_id}")
+            except Exception as e:
+                logger.error(f"Failed to update call analytics: {str(e)}")
+        
+        # Start background thread
+        threading.Thread(target=update_analytics_async).start()
         
     def shutdown(self) -> None:
         """Shutdown call handler and clean up resources"""

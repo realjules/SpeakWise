@@ -3,6 +3,9 @@ import requests
 from typing import Dict, Any, Optional, Callable
 import json
 import os
+import time
+import threading
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -212,14 +215,17 @@ class PindoAdapter:
             logger.error(f"Failed to stream audio to call {call_id}: {str(e)}")
             raise
             
-    def send_sms(self, to_number: str, message: str, sender_id: Optional[str] = None) -> Dict[str, Any]:
+    def send_sms(self, to_number: str, message: str, sender_id: Optional[str] = None, 
+                service: str = "General", sms_type: str = "notification") -> Dict[str, Any]:
         """
-        Send an SMS message.
+        Send an SMS message and update analytics.
         
         Args:
             to_number: The recipient's phone number
             message: The message content
             sender_id: The sender ID (optional, uses default if not provided)
+            service: Service type for analytics (default: General)
+            sms_type: SMS type for analytics (default: notification)
             
         Returns:
             Response from the API
@@ -231,6 +237,7 @@ class PindoAdapter:
         }
         
         try:
+            # Send SMS via Pindo API
             response = requests.post(
                 f"{self.SMS_API_URL}/",
                 headers=self.headers,
@@ -238,8 +245,64 @@ class PindoAdapter:
             )
             response.raise_for_status()
             result = response.json()
-            logger.info(f"SMS sent to {to_number}, message_id: {result.get('sms_id')}")
+            
+            # Log successful send
+            sms_id = result.get('sms_id', f"SMS-{int(time.time())}")
+            logger.info(f"SMS sent to {to_number}, message_id: {sms_id}")
+            
+            # Update analytics asynchronously
+            self._update_analytics(to_number, sms_id, service, sms_type, "delivered", result)
+            
             return result
         except requests.RequestException as e:
             logger.error(f"Failed to send SMS to {to_number}: {str(e)}")
+            
+            # Log failed attempt to analytics
+            sms_id = f"SMS-FAILED-{int(time.time())}"
+            self._update_analytics(to_number, sms_id, service, sms_type, "failed", {"error": str(e)})
+            
             raise
+            
+    def _update_analytics(self, recipient: str, sms_id: str, service: str, 
+                          sms_type: str, status: str, api_response: Dict[str, Any]) -> None:
+        """
+        Update analytics with SMS information.
+        
+        Args:
+            recipient: Recipient phone number
+            sms_id: SMS ID
+            service: Service type
+            sms_type: SMS type
+            status: Delivery status
+            api_response: API response data
+        """
+        # Create record
+        from datetime import datetime
+        import threading
+        
+        record = {
+            "id": sms_id,
+            "recipient": recipient,
+            "timestamp": datetime.now().isoformat() + "Z",
+            "type": sms_type,
+            "status": status,
+            "service": service,
+            "reference": api_response.get('id', sms_id)
+        }
+        
+        # Update analytics in background thread
+        def update_analytics_async():
+            try:
+                # Make request to analytics endpoint
+                analytics_url = "http://localhost:5000/telephony/analytics/sms"
+                requests.post(
+                    analytics_url,
+                    json=record,
+                    headers={"Content-Type": "application/json"}
+                )
+                logger.info(f"SMS analytics updated for {sms_id}")
+            except Exception as e:
+                logger.error(f"Failed to update SMS analytics: {str(e)}")
+        
+        # Start background thread
+        threading.Thread(target=update_analytics_async).start()

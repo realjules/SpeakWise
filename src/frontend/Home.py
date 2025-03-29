@@ -4,17 +4,38 @@ import plotly.express as px
 import plotly.graph_objects as go
 from datetime import datetime, timedelta
 import random
+import json
 
-# Set page configuration
+# Import websocket utility only
+from utils import get_ws_manager, initialize_ws_connection
+
 st.set_page_config(
-    page_title="Home | SpeakWise",
+    page_title="Dashboard | SpeakWise",
     page_icon="🏠",
     layout="wide"
 )
 
-# Custom CSS with SpeakWise color palette
 st.markdown("""
 <style>
+    /* Color scheme based on COLORS.jpg */
+    :root {
+        --deep-purple: #584053;
+        --teal: #8DC6BF;
+        --yellow-orange: #FCBC66;
+        --coral: #F97B4F;
+    }
+    
+    /* Main heading styling */
+    h1 {
+        color: var(--deep-purple);
+    }
+    
+    h2 {
+        color: var(--deep-purple);
+        border-bottom: 2px solid var(--teal);
+        padding-bottom: 8px;
+    }
+    
     /* Sidebar styling */
     section[data-testid="stSidebar"] [data-testid="stSidebarNav"] {
         width: 100%;
@@ -22,337 +43,263 @@ st.markdown("""
     section[data-testid="stSidebar"] [data-testid="stSidebarNav"] ul {
         padding-left: 0.4rem;
     }
-    /* Style all navigation items */
-    section[data-testid="stSidebarNav"] div[data-testid="stSidebarNavItems"] > div {
-        padding: 0.2rem 0;
-        border-radius: 0 4px 4px 0;
-    }
-    /* Emphasize current page (Home) */
+    /* Style Home item (highlighted when active) */
     section[data-testid="stSidebarNav"] div[data-testid="stSidebarNavItems"] > div:first-child {
         background-color: rgba(141, 198, 191, 0.2);
-        border-right: 4px solid #8DC6BF;
+        border-right: 4px solid var(--teal);
         font-weight: bold;
     }
-
-    /* Color palette */
-    :root {
-        --primary: #584053;      /* Deep Purple */
-        --secondary: #8DC6BF;    /* Teal/Mint */
-        --accent: #FCBC66;       /* Muted Orange/Yellow */
-        --highlight: #F97B4F;    /* Coral/Salmon */
-        --text-dark: #333333;    /* Dark text */
-        --text-light: #666666;   /* Light text */
-        --background: #FFFFFF;   /* White background */
-        --background-light: #F8F9FA; /* Light background */
-    }
     
-    /* Typography and layout */
-    .main-header {
-        font-size: 3.5rem;
-        color: #584053;  /* Primary color */
-        font-weight: 700;
-        margin-bottom: 0.8rem;
-        padding-top: 0.5rem;
-    }
-    .sub-header {
-        font-size: 1.1rem;
-        color: #666666;  /* Light text */
-        margin-bottom: 2rem;
-    }
-    
-    /* Cards and metrics */
+    /* Card styling */
     .metric-card {
-        background-color: #FFFFFF;
+        background-color: white;
         border-radius: 10px;
-        padding: 1.5rem;
-        box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        margin-bottom: 1rem;
-        border-left: 4px solid #8DC6BF;  /* Secondary color */
+        padding: 20px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        text-align: center;
+        transition: transform 0.3s ease;
+        border-top: 4px solid var(--teal);
     }
+    
+    .metric-card:hover {
+        transform: translateY(-5px);
+    }
+    
     .metric-value {
-        font-size: 2.5rem;
+        font-size: 36px;
         font-weight: bold;
-        color: #584053;  /* Primary color */
-        margin-bottom: 0.5rem;
+        margin: 10px 0;
+        color: var(--deep-purple);
     }
+    
     .metric-label {
-        font-size: 1rem;
-        color: #666666;  /* Light text */
-        font-weight: 500;
+        font-size: 14px;
+        color: #666;
+        text-transform: uppercase;
     }
     
-    /* Status colors */
-    .success-metric {
-        color: #8DC6BF;  /* Secondary color */
-    }
-    .warning-metric {
-        color: #FCBC66;  /* Accent color */
-    }
-    .error-metric {
-        color: #F97B4F;  /* Highlight color */
+    .metric-trend {
+        font-size: 12px;
+        margin-top: 5px;
     }
     
-    /* Custom tab styling */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 8px;
+    .metric-trend-up {
+        color: var(--teal);
     }
-    .stTabs [data-baseweb="tab"] {
-        height: 50px;
-        white-space: pre-wrap;
-        background-color: #F8F9FA;
-        border-radius: 4px 4px 0 0;
-        gap: 1px;
-        padding-top: 10px;
-        padding-bottom: 10px;
+    
+    .metric-trend-down {
+        color: var(--coral);
     }
-    .stTabs [aria-selected="true"] {
-        background-color: #8DC6BF !important;  /* Secondary color */
-        color: #584053 !important;  /* Primary color */
+    
+    /* Status pill */
+    .status-pill {
+        display: inline-block;
+        padding: 3px 10px;
+        border-radius: 12px;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .status-active {
+        background-color: rgba(141, 198, 191, 0.2);
+        color: var(--teal);
+    }
+    
+    .status-completed {
+        background-color: rgba(252, 188, 102, 0.2);
+        color: var(--yellow-orange);
+    }
+    
+    .status-failed {
+        background-color: rgba(249, 123, 79, 0.2);
+        color: var(--coral);
+    }
+    
+    /* Footer styling */
+    footer {
+        color: var(--deep-purple);
     }
 </style>
 """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-    section[data-testid="stSidebar"] [data-testid="stSidebarNavItems"] > div:first-child {
-    display: none !important;
-    }
-</style>
-""", unsafe_allow_html=True)
+# Direct reading from JSON database files
+import os
+import json
 
-# Sidebar - Simplified
-with st.sidebar:
-    # Use a custom SVG logo
-    logo_path = "static/images/logo.svg"
-    
+# Define path to JSON files
+DATA_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), 'data'))
+ANALYTICS_FILE = os.path.join(DATA_DIR, 'analytics.json')
+CALLS_FILE = os.path.join(DATA_DIR, 'calls.json')
+
+# Load data directly from JSON files
+def load_json_data(file_path):
     try:
-        # Try to load the logo
-        st.image(logo_path, width=200)
-    except Exception:
-        # Fallback to text if image loading fails
-        st.markdown(f'<h1 style="color: #584053;">SpeakWise</h1>', unsafe_allow_html=True)
-        
-    st.markdown('<h3 style="color: #584053; margin-top: 2rem;">Date Filter</h3>', unsafe_allow_html=True)
+        with open(file_path, 'r') as f:
+            return json.load(f)
+    except Exception as e:
+        st.error(f"Error loading data from {file_path}: {str(e)}")
+        return {}
+
+# Load analytics data
+analytics_data = load_json_data(ANALYTICS_FILE)
+
+# Initialize connection for WebSocket (for active calls)
+initialize_ws_connection()
+
+# Register for WebSocket updates
+if "ws_dashboard_callbacks_registered" not in st.session_state:
+    def on_system_status(message):
+        # Update system status data
+        st.session_state.system_status = message.get("status", {})
     
-    # Date filter
-    date_option = st.selectbox(
-        "Select period",
-        ["Today", "Last 7 days", "Last 30 days", "Custom"]
+    # Get WebSocket manager
+    ws_manager = get_ws_manager()
+    ws_manager.register_callback("system.status", on_system_status)
+    
+    st.session_state.ws_dashboard_callbacks_registered = True
+
+# Header
+st.markdown("# SpeakWise Dashboard")
+st.markdown("Welcome to the SpeakWise control center. Monitor call performance and track service usage.")
+
+# Call Operations Statistics
+st.markdown("## Call Operations Statistics")
+
+# Get call and SMS stats directly from loaded data
+call_stats = analytics_data.get("call_stats", {})
+sms_stats = analytics_data.get("sms_stats", {})
+
+# System status from WebSocket (or default values if not available)
+if "system_status" not in st.session_state:
+    st.session_state.system_status = {
+        "active_calls": call_stats.get("active_calls", 0),
+        "uptime": random.randint(86400, 604800)  # 1-7 days in seconds
+    }
+
+# Main metrics
+col1, col2, col3, col4 = st.columns(4)
+
+with col1:
+    # Active calls metric
+    st.markdown("""
+    <div class="metric-card">
+        <div class="metric-label">Active Calls</div>
+        <div class="metric-value">{}</div>
+        <div class="metric-trend">
+            <span class="status-pill status-active">● ACTIVE</span>
+        </div>
+    </div>
+    """.format(st.session_state.system_status.get("active_calls", 0)), unsafe_allow_html=True)
+
+with col2:
+    # Call success rate
+    success_rate = call_stats.get("success_rate", 0)
+    trend_class = "metric-trend-up" if success_rate >= 95 else "metric-trend-down"
+    
+    st.markdown("""
+    <div class="metric-card">
+        <div class="metric-label">Call Success Rate</div>
+        <div class="metric-value">{:.1f}%</div>
+        <div class="metric-trend {}">
+            {} Target: 95%
+        </div>
+    </div>
+    """.format(
+        success_rate, 
+        trend_class,
+        "✓" if success_rate >= 95 else "✗"
+    ), unsafe_allow_html=True)
+
+with col3:
+    # Average call duration
+    avg_duration = call_stats.get("avg_duration_seconds", 0)
+    minutes = avg_duration // 60
+    seconds = avg_duration % 60
+    
+    st.markdown("""
+    <div class="metric-card">
+        <div class="metric-label">Avg Call Duration</div>
+        <div class="metric-value">{:d}m {:02d}s</div>
+        <div class="metric-trend">
+            Last 30 days
+        </div>
+    </div>
+    """.format(minutes, seconds), unsafe_allow_html=True)
+
+with col4:
+    # Total calls metric
+    st.markdown("""
+    <div class="metric-card">
+        <div class="metric-label">Total Calls</div>
+        <div class="metric-value">{:,}</div>
+        <div class="metric-trend">
+            All time
+        </div>
+    </div>
+    """.format(call_stats.get("total_calls", 0)), unsafe_allow_html=True)
+
+# Call volume trends
+st.markdown("## Call & SMS Volume Trends")
+
+# Get daily call and SMS data directly from loaded data
+daily_calls = analytics_data.get("daily_calls", [])[-30:] # Last 30 days
+daily_sms = analytics_data.get("daily_sms", [])[-30:] # Last 30 days
+
+# Create DataFrames
+df_calls = pd.DataFrame(daily_calls)
+df_calls["date"] = pd.to_datetime(df_calls["date"])
+
+df_sms = pd.DataFrame(daily_sms)
+df_sms["date"] = pd.to_datetime(df_sms["date"])
+
+# Plotting
+fig = go.Figure()
+
+# Call volume trace
+fig.add_trace(go.Scatter(
+    x=df_calls["date"],
+    y=df_calls["count"],
+    name="Calls",
+    mode="lines",
+    line=dict(width=3, color="#584053")  # Deep purple from COLORS.jpg
+))
+
+# SMS volume trace
+fig.add_trace(go.Scatter(
+    x=df_sms["date"],
+    y=df_sms["sent"],
+    name="SMS",
+    mode="lines",
+    line=dict(width=3, color="#8DC6BF")  # Teal from COLORS.jpg
+))
+
+# Update layout
+fig.update_layout(
+    title={
+        "text": "Daily Volume (Last 30 Days)",
+        "font": {"color": "#584053"}  # Deep purple from COLORS.jpg
+    },
+    xaxis_title="Date",
+    yaxis_title="Count",
+    legend=dict(
+        orientation="h",
+        yanchor="bottom",
+        y=1.02,
+        xanchor="right",
+        x=1
+    ),
+    margin=dict(l=20, r=20, t=60, b=20),
+    height=400,
+    paper_bgcolor="white",
+    plot_bgcolor="rgba(141, 198, 191, 0.05)",  # Very light teal background
+    font=dict(
+        color="#584053"  # Deep purple for all text
     )
-    
-    if date_option == "Custom":
-        start_date = st.date_input("Start date", datetime.now() - timedelta(days=7))
-        end_date = st.date_input("End date", datetime.now())
-    
-    # Status filter
-    st.markdown('<h3 style="color: #584053; margin-top: 2rem;">Call Status</h3>', unsafe_allow_html=True)
-    statuses = ["All", "Completed", "In Progress", "Failed"]
-    selected_status = st.multiselect("Select status", statuses, default="All")
-    
-    # Simple refresh button
-    st.markdown('<div style="margin-top: 3rem;"></div>', unsafe_allow_html=True)
-    st.button("Refresh Data")
+)
 
-# Header with SpeakWise color palette
-st.markdown('<div style="padding: 1.5rem 0; background-color: #f8f9fa; border-radius: 10px; margin-bottom: 2rem; padding-left: 1.5rem; border-left: 5px solid #8DC6BF;">', unsafe_allow_html=True)
-st.markdown('<p class="main-header">SpeakWise Dashboard</p>', unsafe_allow_html=True)
-st.markdown('<p class="sub-header">Real-time monitoring and analytics of the voice assistant system</p>', unsafe_allow_html=True)
-st.markdown('</div>', unsafe_allow_html=True)
-
-# Create tabs
-tab1, tab2 = st.tabs(["Overview", "Call Analytics"])
-
-# Generate sample data
-def generate_sample_data(days=30, calls_per_day=50):
-    data = []
-    services = ["Business Registration", "Marriage Certificate", "Land Transfer", "Passport Application"]
-    statuses = ["Completed", "In Progress", "Failed"]
-    status_weights = [0.7, 0.2, 0.1]
-    
-    for i in range(days):
-        date = datetime.now() - timedelta(days=i)
-        n_calls = random.randint(calls_per_day - 20, calls_per_day + 20)
-        
-        for j in range(n_calls):
-            service = random.choice(services)
-            status = random.choices(statuses, status_weights)[0]
-            duration = random.randint(60, 900) if status != "Failed" else random.randint(10, 120)
-            steps_completed = random.randint(0, 5)
-            
-            # Generate a random time during business hours
-            hour = random.randint(8, 17)
-            minute = random.randint(0, 59)
-            timestamp = date.replace(hour=hour, minute=minute)
-            
-            data.append({
-                "timestamp": timestamp,
-                "service": service,
-                "status": status,
-                "duration": duration,
-                "steps_completed": steps_completed,
-                "user_satisfaction": random.randint(1, 5) if status == "Completed" else None
-            })
-    
-    return pd.DataFrame(data)
-
-df = generate_sample_data()
-
-# Overview tab
-with tab1:
-    # Key metrics
-    col1, col2, col3, col4 = st.columns(4)
-    
-    with col1:
-        calls_today = len(df[df["timestamp"].dt.date == datetime.now().date()])
-        st.metric("Calls Today", calls_today)
-    
-    with col2:
-        completion_rate = len(df[df["status"] == "Completed"]) / len(df) * 100
-        st.metric("Completion Rate", f"{completion_rate:.1f}%")
-    
-    with col3:
-        active_calls = len(df[df["status"] == "In Progress"])
-        st.metric("Active Calls", active_calls)
-    
-    with col4:
-        avg_duration = df[df["status"] == "Completed"]["duration"].mean() / 60
-        st.metric("Avg. Call Duration", f"{avg_duration:.1f} min")
-    
-    st.markdown("### Call Volume Trend")
-    # Prepare data for chart
-    daily_counts = df.groupby(df["timestamp"].dt.date).size().reset_index(name="count")
-    daily_counts.columns = ["date", "count"]
-    
-    # Create line chart with SpeakWise color palette
-    fig = px.line(
-        daily_counts, 
-        x="date", 
-        y="count",
-        labels={"count": "Number of Calls", "date": "Date"},
-        markers=True,
-        line_shape="spline",  # Smooth line
-        color_discrete_sequence=["#584053"]  # Primary color
-    )
-    fig.update_traces(
-        marker=dict(size=8, color="#F97B4F"),  # Highlight color for markers
-        line=dict(width=3)  # Thicker line
-    )
-    fig.update_layout(
-        height=400,
-        margin=dict(l=20, r=20, t=30, b=20),
-        paper_bgcolor="rgba(0,0,0,0)",  # Transparent background
-        plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot area
-        xaxis=dict(
-            showgrid=True,
-            gridcolor="#f0f0f0",
-            zeroline=False
-        ),
-        yaxis=dict(
-            showgrid=True,
-            gridcolor="#f0f0f0",
-            zeroline=False
-        )
-    )
-    st.plotly_chart(fig, use_container_width=True)
-    
-
-# Call Analytics tab
-with tab2:
-    st.markdown("### Call Analytics")
-    
-    # Calculate summary metrics
-    total_calls = len(df)
-    completed_calls = len(df[df["status"] == "Completed"])
-    failed_calls = len(df[df["status"] == "Failed"])
-    
-    # Display metrics
-    col1, col2, col3 = st.columns(3)
-    with col1:
-        st.metric("Total Calls", f"{total_calls}")
-    with col2:
-        st.metric("Completed Calls", f"{completed_calls}", 
-                 delta=f"{completed_calls/total_calls*100:.1f}%" if total_calls > 0 else "0%")
-    with col3:
-        st.metric("Failed Calls", f"{failed_calls}",
-                 delta=f"{failed_calls/total_calls*100:.1f}%" if total_calls > 0 else "0%")
-    
-    # Create two larger charts side by side
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        st.markdown("### Hourly Distribution")
-        hourly_counts = df.groupby(df["timestamp"].dt.hour).size().reset_index(name="count")
-        hourly_counts.columns = ["hour", "count"]
-        
-        fig = px.bar(
-            hourly_counts,
-            x="hour",
-            y="count",
-            labels={"count": "Number of Calls", "hour": "Hour of Day"},
-            color_discrete_sequence=["#8DC6BF"]  # Secondary color
-        )
-        fig.update_layout(
-            height=450,
-            margin=dict(l=20, r=20, t=30, b=20),
-            xaxis=dict(
-                tickmode='linear',
-                tick0=0,
-                dtick=2
-            ),
-            paper_bgcolor="rgba(0,0,0,0)",  # Transparent background
-            plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot area
-            xaxis_title_font={"color": "#584053"},  # Primary color
-            yaxis_title_font={"color": "#584053"},  # Primary color
-            yaxis=dict(
-                showgrid=True,
-                gridcolor="#f0f0f0",
-                zeroline=False
-            )
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        
-    with col2:
-        st.markdown("### Duration Distribution")
-        
-        # Create histogram for call duration
-        fig = px.histogram(
-            df[df["status"] == "Completed"],
-            x="duration",
-            nbins=20,
-            labels={"duration": "Call Duration (seconds)", "count": "Number of Calls"},
-            color_discrete_sequence=["#FCBC66"]  # Accent color
-        )
-        # Add outline to bars
-        fig.update_traces(
-            marker=dict(
-                line=dict(
-                    color="#F97B4F",  # Highlight color
-                    width=1
-                )
-            )
-        )
-        fig.update_layout(
-            height=450,
-            margin=dict(l=20, r=20, t=30, b=20),
-            yaxis_title="Number of Calls",
-            paper_bgcolor="rgba(0,0,0,0)",  # Transparent background
-            plot_bgcolor="rgba(0,0,0,0)",   # Transparent plot area
-            xaxis_title_font={"color": "#584053"},  # Primary color
-            yaxis_title_font={"color": "#584053"},  # Primary color
-            xaxis=dict(
-                showgrid=True,
-                gridcolor="#f0f0f0",
-                zeroline=False
-            ),
-            yaxis=dict(
-                showgrid=True,
-                gridcolor="#f0f0f0",
-                zeroline=False
-            )
-        )
-        st.plotly_chart(fig, use_container_width=True)
+st.plotly_chart(fig, use_container_width=True)
 
 
 # Footer
-st.markdown("---")
-st.markdown(f'<div style="text-align: center; color: #666666; padding: 1rem 0;">Last updated: {datetime.now().strftime("%Y-%m-%d %H:%M:%S")}<br>© 2025 <span style="color: #584053; font-weight: bold;">SpeakWise</span></div>', unsafe_allow_html=True)
+st.markdown('<hr style="border-top: 2px solid #8DC6BF;">', unsafe_allow_html=True)
+st.markdown('<p style="color: #584053; text-align: center;">© 2023 SpeakWise | Dashboard v1.0 | Last updated: ' + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '</p>', unsafe_allow_html=True)

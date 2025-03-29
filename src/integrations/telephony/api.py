@@ -91,6 +91,25 @@ def get_call_handler() -> CallHandler:
         
     return call_handler
 
+# Import analytics utility
+import sys
+import os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'frontend')))
+from utils.analytics import AnalyticsManager
+
+# Initialize analytics manager for updating analytics data
+analytics_manager = None
+
+def get_analytics_manager():
+    """Get the analytics manager, initializing if necessary"""
+    global analytics_manager
+    
+    if analytics_manager is None:
+        from utils.analytics import AnalyticsManager
+        analytics_manager = AnalyticsManager()
+        
+    return analytics_manager
+
 # API Routes
 
 @app.route('/telephony/health', methods=['GET'])
@@ -239,6 +258,54 @@ def get_active_calls():
         return jsonify({"calls": calls})
     except Exception as e:
         logger.error(f"Error getting active calls: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/telephony/analytics/sms', methods=['POST'])
+def update_sms_analytics():
+    """Update SMS analytics"""
+    try:
+        # Get SMS data
+        if not request.json:
+            logger.error("No JSON data in analytics request")
+            return jsonify({"status": "error", "message": "No JSON data"}), 400
+            
+        # Get SMS record
+        sms_record = request.json
+        
+        # Update analytics
+        analytics = get_analytics_manager()
+        result = analytics.add_sms_record(sms_record)
+        
+        if result:
+            return jsonify({"status": "success", "message": "SMS analytics updated"})
+        else:
+            return jsonify({"status": "error", "message": "Failed to update SMS analytics"}), 500
+    except Exception as e:
+        logger.error(f"Error updating SMS analytics: {str(e)}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/telephony/analytics/call', methods=['POST'])
+def update_call_analytics():
+    """Update call analytics"""
+    try:
+        # Get call data
+        if not request.json:
+            logger.error("No JSON data in analytics request")
+            return jsonify({"status": "error", "message": "No JSON data"}), 400
+            
+        # Get call record
+        call_record = request.json
+        
+        # Update analytics
+        analytics = get_analytics_manager()
+        result = analytics.update_call_record(call_record)
+        
+        if result:
+            return jsonify({"status": "success", "message": "Call analytics updated"})
+        else:
+            return jsonify({"status": "error", "message": "Failed to update call analytics"}), 500
+    except Exception as e:
+        logger.error(f"Error updating call analytics: {str(e)}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
 @app.route('/telephony/call/<call_id>', methods=['GET'])

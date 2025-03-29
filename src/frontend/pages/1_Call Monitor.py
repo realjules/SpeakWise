@@ -4,6 +4,14 @@ import plotly.express as px
 from datetime import datetime, timedelta
 import random
 import json
+import time
+
+# Import utility functions
+import sys
+import os
+# Add parent directory to path to import utils
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from utils import get_api_client, get_ws_manager, initialize_ws_connection, get_latest_ws_messages
 
 st.set_page_config(
     page_title="Call Monitor | SpeakWise",
@@ -108,318 +116,72 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Initialize API client and WebSocket connection
+api_client = get_api_client()
+initialize_ws_connection()
+
+# Get WebSocket manager
+ws_manager = get_ws_manager()
+
+# Register callback for WebSocket events
+if "ws_callbacks_registered" not in st.session_state:
+    def on_call_new(message):
+        # Add new call to active calls
+        if "active_calls" in st.session_state:
+            st.session_state.active_calls.append(message["call"])
+    
+    def on_call_update(message):
+        # Update call in active calls
+        if "active_calls" in st.session_state:
+            call_id = message["call"]["id"]
+            for i, call in enumerate(st.session_state.active_calls):
+                if call["id"] == call_id:
+                    st.session_state.active_calls[i] = message["call"]
+                    break
+    
+    def on_call_end(message):
+        # Remove call from active calls and add to recent calls
+        if "active_calls" in st.session_state and "recent_calls" in st.session_state:
+            call_id = message["call"]["id"]
+            # Remove from active calls
+            st.session_state.active_calls = [c for c in st.session_state.active_calls if c["id"] != call_id]
+            # Add to recent calls at the beginning
+            st.session_state.recent_calls.insert(0, message["call"])
+            # Limit recent calls to 20
+            if len(st.session_state.recent_calls) > 20:
+                st.session_state.recent_calls = st.session_state.recent_calls[:20]
+    
+    ws_manager.register_callback("call.new", on_call_new)
+    ws_manager.register_callback("call.update", on_call_update)
+    ws_manager.register_callback("call.end", on_call_end)
+    
+    st.session_state.ws_callbacks_registered = True
+
 # Header
 st.markdown("# 📞 Call Monitor")
 st.markdown("Real-time monitoring and management of active and recent calls")
 
-# Function to generate sample AI actions for a call
-def generate_ai_actions(service_type, num_actions=8):
-    actions = []
-    
-    # Common initial actions
-    actions.append({
-        "timestamp": datetime.now() - timedelta(minutes=random.randint(10, 30)),
-        "action": "Initialize Session",
-        "details": "Started new browser session for service automation",
-        "success": True,
-        "duration": random.randint(1, 3),
-        "screenshot": "https://via.placeholder.com/600x400?text=Browser+Initialized"
-    })
-    
-    actions.append({
-        "timestamp": datetime.now() - timedelta(minutes=random.randint(8, 28)),
-        "action": "Navigate to Main Page",
-        "details": "Navigated to https://services.gov.rw/",
-        "success": True,
-        "duration": random.randint(2, 4),
-        "screenshot": "https://via.placeholder.com/600x400?text=Main+Page+Navigation"
-    })
-    
-    # Service-specific actions
-    if service_type == "Business Registration":
-        service_actions = [
-            {
-                "action": "Search Service",
-                "details": "Searched for 'business registration' in the service catalog",
-                "success": True,
-                "duration": random.randint(1, 3),
-                "screenshot": "https://via.placeholder.com/600x400?text=Search+Service"
-            },
-            {
-                "action": "Select Business Type",
-                "details": "Selected 'Limited Liability Company' from the available options",
-                "success": True,
-                "duration": random.randint(1, 2),
-                "screenshot": "https://via.placeholder.com/600x400?text=Select+Business+Type"
-            },
-            {
-                "action": "Fill Business Details",
-                "details": "Entered business name, address, and contact information",
-                "success": True,
-                "duration": random.randint(3, 6),
-                "screenshot": "https://via.placeholder.com/600x400?text=Business+Details+Form"
-            },
-            {
-                "action": "Upload Documents",
-                "details": "Uploaded identification and business plan documents",
-                "success": random.choice([True, True, False]),
-                "duration": random.randint(5, 10),
-                "screenshot": "https://via.placeholder.com/600x400?text=Document+Upload"
-            },
-            {
-                "action": "Retry Document Upload",
-                "details": "Retried document upload with optimized file size",
-                "success": True,
-                "duration": random.randint(3, 7),
-                "screenshot": "https://via.placeholder.com/600x400?text=Document+Upload+Retry"
-            },
-            {
-                "action": "Payment Processing",
-                "details": "Processed payment of 15,000 RWF via mobile money",
-                "success": True,
-                "duration": random.randint(5, 12),
-                "screenshot": "https://via.placeholder.com/600x400?text=Payment+Processing"
-            },
-            {
-                "action": "Generate Receipt",
-                "details": "Generated and saved payment receipt",
-                "success": True,
-                "duration": random.randint(2, 4),
-                "screenshot": "https://via.placeholder.com/600x400?text=Receipt+Generation"
-            },
-            {
-                "action": "Confirmation",
-                "details": "Received confirmation of successful registration submission",
-                "success": True,
-                "duration": random.randint(1, 3),
-                "screenshot": "https://via.placeholder.com/600x400?text=Confirmation+Page"
-            }
-        ]
-    elif service_type == "Marriage Certificate":
-        service_actions = [
-            {
-                "action": "Search Service",
-                "details": "Searched for 'marriage certificate' in the service catalog",
-                "success": True,
-                "duration": random.randint(1, 3),
-                "screenshot": "https://via.placeholder.com/600x400?text=Search+Marriage+Service"
-            },
-            {
-                "action": "Enter Applicant Details",
-                "details": "Entered names and identification for both partners",
-                "success": True,
-                "duration": random.randint(4, 8),
-                "screenshot": "https://via.placeholder.com/600x400?text=Applicant+Details"
-            },
-            {
-                "action": "Select Ceremony Date",
-                "details": "Selected preferred date for ceremony from calendar",
-                "success": True,
-                "duration": random.randint(1, 2),
-                "screenshot": "https://via.placeholder.com/600x400?text=Date+Selection"
-            },
-            {
-                "action": "Add Witness Information",
-                "details": "Added details for required witnesses",
-                "success": True,
-                "duration": random.randint(3, 6),
-                "screenshot": "https://via.placeholder.com/600x400?text=Witness+Information"
-            },
-            {
-                "action": "Upload Identification",
-                "details": "Uploaded ID cards for both applicants",
-                "success": True,
-                "duration": random.randint(4, 8),
-                "screenshot": "https://via.placeholder.com/600x400?text=ID+Upload"
-            },
-            {
-                "action": "Payment Processing",
-                "details": "Processed payment of 7,500 RWF via mobile money",
-                "success": random.choice([True, False]),
-                "duration": random.randint(5, 12),
-                "screenshot": "https://via.placeholder.com/600x400?text=Payment+Processing"
-            },
-            {
-                "action": "Retry Payment",
-                "details": "Retried payment after initial failure",
-                "success": True,
-                "duration": random.randint(3, 8),
-                "screenshot": "https://via.placeholder.com/600x400?text=Payment+Retry"
-            },
-            {
-                "action": "Confirmation",
-                "details": "Received confirmation and appointment details",
-                "success": True,
-                "duration": random.randint(1, 3),
-                "screenshot": "https://via.placeholder.com/600x400?text=Confirmation+Page"
-            }
-        ]
-    else:
-        # Generic actions for other services
-        service_actions = [
-            {
-                "action": "Search Service",
-                "details": f"Searched for '{service_type}' in the service catalog",
-                "success": True,
-                "duration": random.randint(1, 3),
-                "screenshot": "https://via.placeholder.com/600x400?text=Search+Service"
-            },
-            {
-                "action": "Enter User Information",
-                "details": "Entered personal details and identification",
-                "success": True,
-                "duration": random.randint(3, 6),
-                "screenshot": "https://via.placeholder.com/600x400?text=User+Information"
-            },
-            {
-                "action": "Form Completion",
-                "details": "Completed all required service-specific fields",
-                "success": True,
-                "duration": random.randint(4, 10),
-                "screenshot": "https://via.placeholder.com/600x400?text=Form+Completion"
-            },
-            {
-                "action": "Service Option Selection",
-                "details": "Selected appropriate service options and preferences",
-                "success": True,
-                "duration": random.randint(1, 3),
-                "screenshot": "https://via.placeholder.com/600x400?text=Option+Selection"
-            },
-            {
-                "action": "Upload Required Documents",
-                "details": "Uploaded all required supporting documents",
-                "success": random.choice([True, True, False]),
-                "duration": random.randint(5, 10),
-                "screenshot": "https://via.placeholder.com/600x400?text=Document+Upload"
-            },
-            {
-                "action": "Fix Document Format",
-                "details": "Converted and reuploaded documents in correct format",
-                "success": True,
-                "duration": random.randint(3, 8),
-                "screenshot": "https://via.placeholder.com/600x400?text=Document+Fix"
-            },
-            {
-                "action": "Payment Processing",
-                "details": f"Processed payment for {service_type} service fee",
-                "success": True,
-                "duration": random.randint(5, 12),
-                "screenshot": "https://via.placeholder.com/600x400?text=Payment+Processing"
-            },
-            {
-                "action": "Service Confirmation",
-                "details": "Received confirmation and reference number",
-                "success": True,
-                "duration": random.randint(1, 3),
-                "screenshot": "https://via.placeholder.com/600x400?text=Service+Confirmation"
-            }
-        ]
-    
-    # Select a random subset of service-specific actions
-    selected_actions = random.sample(service_actions, min(len(service_actions), num_actions - 2))
-    
-    # Add timestamps to service-specific actions
-    for i, action in enumerate(selected_actions):
-        action["timestamp"] = actions[-1]["timestamp"] + timedelta(minutes=random.randint(1, 3))
-        actions.append(action)
-    
-    # Ensure actions are in chronological order
-    actions.sort(key=lambda x: x["timestamp"])
-    
-    # Calculate success rate
-    success_count = sum(1 for action in actions if action["success"])
-    success_rate = success_count / len(actions) * 100
-    
-    # Calculate total duration
-    total_duration = sum(action["duration"] for action in actions)
-    
-    return actions, success_rate, total_duration
-
-# Generate sample transaction data
-def generate_call_data(num_active=5, num_recent=20):
-    services = ["Business Registration", "Marriage Certificate", "Land Transfer", "Passport Application"]
-    statuses = ["Active", "Completed", "Failed"]
-    status_weights = [0.2, 0.7, 0.1]
-    
-    # Active calls
-    active_calls = []
-    for i in range(random.randint(0, num_active)):
-        service = random.choice(services)
-        duration = random.randint(30, 900)
-        start_time = datetime.now() - timedelta(seconds=duration)
-        step = random.randint(1, 5)
-        total_steps = random.randint(5, 8)
-        
-        # Generate AI actions for this call
-        ai_actions, success_rate, action_duration = generate_ai_actions(service, random.randint(3, 8))
-        
-        active_calls.append({
-            "id": f"CALL-{random.randint(1000, 9999)}",
-            "phone": f"+25078{random.randint(1000000, 9999999)}",
-            "service": service,
-            "start_time": start_time,
-            "duration": duration,
-            "status": "Active",
-            "current_step": step,
-            "total_steps": total_steps,
-            "agent_id": f"AGT-{random.randint(100, 999)}",
-            "ai_actions": ai_actions,
-            "success_rate": success_rate,
-            "action_duration": action_duration
-        })
-    
-    # Recent calls
-    recent_calls = []
-    for i in range(num_recent):
-        service = random.choice(services)
-        status = random.choices(statuses, status_weights)[0]
-        duration = random.randint(30, 900) if status != "Failed" else random.randint(10, 120)
-        end_time = datetime.now() - timedelta(minutes=random.randint(5, 120))
-        start_time = end_time - timedelta(seconds=duration)
-        
-        if status == "Active":
-            completion = None
-        elif status == "Failed":
-            completion = "Error"
-        else:
-            completion = "Success"
-        
-        # Generate AI actions for this call
-        ai_actions, success_rate, action_duration = generate_ai_actions(service, random.randint(5, 10))
-        
-        recent_calls.append({
-            "id": f"CALL-{random.randint(1000, 9999)}",
-            "phone": f"+25078{random.randint(1000000, 9999999)}",
-            "service": service,
-            "start_time": start_time,
-            "end_time": end_time if status != "Active" else None,
-            "duration": duration,
-            "status": status,
-            "completion": completion,
-            "agent_id": f"AGT-{random.randint(100, 999)}",
-            "ai_actions": ai_actions,
-            "success_rate": success_rate,
-            "action_duration": action_duration
-        })
-    
+# Load call data from API
+@st.cache_data(ttl=5)  # Cache for 5 seconds
+def load_call_data():
+    active_calls = api_client.get_active_calls()
+    recent_calls = api_client.get_recent_calls()
     return active_calls, recent_calls
 
-active_calls, recent_calls = generate_call_data()
-
-# Store in session state for persistence
-if 'active_calls' not in st.session_state:
+# Check if we need to reload data
+if "active_calls" not in st.session_state or "recent_calls" not in st.session_state:
+    active_calls, recent_calls = load_call_data()
     st.session_state.active_calls = active_calls
-
-if 'recent_calls' not in st.session_state:
     st.session_state.recent_calls = recent_calls
-
-if 'selected_call_id' not in st.session_state:
-    st.session_state.selected_call_id = None
 
 # Function to set selected call and trigger a rerun
 def select_call(call_id):
     st.session_state.selected_call_id = call_id
-    st.rerun()
+    st.experimental_rerun()
+
+# Initialize selected call ID if not present
+if "selected_call_id" not in st.session_state:
+    st.session_state.selected_call_id = None
 
 # Tabs for different views
 call_tab, history_tab = st.tabs(["Active Calls", "Call History"])
@@ -435,7 +197,7 @@ with call_tab:
     with col2:
         service_filter = st.selectbox(
             "Filter by service",
-            ["All Services"] + list(set([call["service"] for call in st.session_state.active_calls])),
+            ["All Services"] + list(set([call["service"] for call in st.session_state.active_calls]) or ["Business Registration", "Marriage Certificate", "Land Transfer", "Passport Application"]),
             key="active_service_filter"
         )
     
@@ -453,9 +215,12 @@ with call_tab:
     
     # Apply sorting
     if sort_by == "Newest First":
-        filtered_active_calls = sorted(filtered_active_calls, key=lambda x: x["start_time"], reverse=True)
+        filtered_active_calls = sorted(filtered_active_calls, 
+                                       key=lambda x: datetime.fromisoformat(x["start_time"]) if isinstance(x["start_time"], str) else x["start_time"], 
+                                       reverse=True)
     elif sort_by == "Oldest First":
-        filtered_active_calls = sorted(filtered_active_calls, key=lambda x: x["start_time"])
+        filtered_active_calls = sorted(filtered_active_calls, 
+                                       key=lambda x: datetime.fromisoformat(x["start_time"]) if isinstance(x["start_time"], str) else x["start_time"])
     elif sort_by == "Duration (Longest)":
         filtered_active_calls = sorted(filtered_active_calls, key=lambda x: x["duration"], reverse=True)
     elif sort_by == "Duration (Shortest)":
@@ -464,9 +229,33 @@ with call_tab:
     # Display active calls
     if not filtered_active_calls:
         st.info("No active calls match your filters")
+        
+        # Demo buttons
+        st.markdown("### Demo Controls")
+        demo_col1, demo_col2 = st.columns(2)
+        
+        with demo_col1:
+            demo_phone = st.text_input("Phone Number", value="+250783456789", key="demo_phone")
+            demo_service = st.selectbox("Service Type", 
+                ["Business Registration", "Marriage Certificate", "Land Transfer", "Passport Application"],
+                key="demo_service")
+        
+        with demo_col2:
+            if st.button("Simulate New Call", key="simulate_call"):
+                new_call = api_client.simulate_incoming_call(demo_phone, demo_service)
+                st.success(f"New call simulated: {new_call['id']}")
+                st.session_state.selected_call_id = new_call['id']
+                st.experimental_rerun()
     else:
         for i, call in enumerate(filtered_active_calls):
             col1, col2 = st.columns([3, 1])
+            
+            # Format timestamp
+            if isinstance(call["start_time"], str):
+                start_time = datetime.fromisoformat(call["start_time"].replace('Z', '+00:00'))
+                start_time_str = start_time.strftime("%H:%M:%S")
+            else:
+                start_time_str = call["start_time"].strftime("%H:%M:%S")
             
             with col1:
                 st.markdown(f"""
@@ -476,7 +265,7 @@ with call_tab:
                     </div>
                     <div class="call-info">
                         <strong>Service:</strong> {call["service"]}<br>
-                        <strong>Started:</strong> {call["start_time"].strftime("%H:%M:%S")}<br>
+                        <strong>Started:</strong> {start_time_str}<br>
                         <strong>Duration:</strong> {call["duration"] // 60}m {call["duration"] % 60}s<br>
                         <strong>Agent:</strong> {call["agent_id"]}
                     </div>
@@ -488,16 +277,38 @@ with call_tab:
                 progress = call["current_step"] / call["total_steps"]
                 st.progress(progress)
                 
-                if st.button("View Details", key=f"view_active_{i}"):
-                    st.session_state.selected_call_id = call["id"]
-                    st.session_state.active_tab = "details"
+                col_a, col_b = st.columns(2)
+                
+                with col_a:
+                    if st.button("View Details", key=f"view_active_{i}"):
+                        st.session_state.selected_call_id = call["id"]
+                
+                with col_b:
+                    if st.button("Advance Call", key=f"advance_{i}"):
+                        api_client.simulate_call_progress(call["id"])
+                        st.experimental_rerun()
     
     # Refresh controls
-    col1, col2 = st.columns([3, 1])
-    with col2:
+    refresh_col1, refresh_col2, refresh_col3 = st.columns([2, 1, 1])
+    with refresh_col2:
         if st.button("Refresh Data", key="refresh_active"):
-            st.session_state.active_calls, _ = generate_call_data()
-            st.rerun()
+            active_calls, recent_calls = load_call_data()
+            st.session_state.active_calls = active_calls
+            st.session_state.recent_calls = recent_calls
+            st.experimental_rerun()
+    
+    with refresh_col3:
+        if st.button("Simulate New Call", key="new_call"):
+            # Phone number format +250XXXXXXXX
+            phone = f"+250{random.randint(700000000, 799999999)}"
+            service = random.choice([
+                "Business Registration", "Marriage Certificate", 
+                "Land Transfer", "Passport Application"
+            ])
+            new_call = api_client.simulate_incoming_call(phone, service)
+            st.success(f"New call simulated: {new_call['id']}")
+            st.session_state.selected_call_id = new_call['id']
+            st.experimental_rerun()
 
 # Call History Tab
 with history_tab:
@@ -510,7 +321,7 @@ with history_tab:
     with col2:
         history_service_filter = st.selectbox(
             "Filter by service",
-            ["All Services"] + list(set([call["service"] for call in st.session_state.recent_calls])),
+            ["All Services"] + list(set([call["service"] for call in st.session_state.recent_calls]) or ["Business Registration", "Marriage Certificate", "Land Transfer", "Passport Application"]),
             key="history_service_filter"
         )
     
@@ -538,9 +349,12 @@ with history_tab:
     
     # Apply sorting
     if history_sort_by == "Newest First":
-        filtered_recent_calls = sorted(filtered_recent_calls, key=lambda x: x["start_time"], reverse=True)
+        filtered_recent_calls = sorted(filtered_recent_calls, 
+                                      key=lambda x: datetime.fromisoformat(x["start_time"]) if isinstance(x["start_time"], str) else x["start_time"], 
+                                      reverse=True)
     elif history_sort_by == "Oldest First":
-        filtered_recent_calls = sorted(filtered_recent_calls, key=lambda x: x["start_time"])
+        filtered_recent_calls = sorted(filtered_recent_calls, 
+                                     key=lambda x: datetime.fromisoformat(x["start_time"]) if isinstance(x["start_time"], str) else x["start_time"])
     elif history_sort_by == "Duration (Longest)":
         filtered_recent_calls = sorted(filtered_recent_calls, key=lambda x: x["duration"], reverse=True)
     elif history_sort_by == "Duration (Shortest)":
@@ -548,16 +362,27 @@ with history_tab:
     
     # Create dataframe for display
     if filtered_recent_calls:
+        # Convert to DataFrame
         df = pd.DataFrame(filtered_recent_calls)
         
         # Create a copy without the AI actions to display
         display_df = df.copy()
-        display_df["start_time"] = display_df["start_time"].dt.strftime("%Y-%m-%d %H:%M:%S")
+        
+        # Convert timestamps to strings
+        if "start_time" in display_df.columns:
+            display_df["start_time"] = display_df["start_time"].apply(
+                lambda x: datetime.fromisoformat(x.replace('Z', '+00:00')).strftime("%Y-%m-%d %H:%M:%S") if isinstance(x, str) else x.strftime("%Y-%m-%d %H:%M:%S")
+            )
+        
         if "end_time" in display_df.columns:
-            display_df["end_time"] = display_df["end_time"].astype(str).replace('NaT', '')
+            display_df["end_time"] = display_df["end_time"].apply(
+                lambda x: datetime.fromisoformat(x.replace('Z', '+00:00')).strftime("%Y-%m-%d %H:%M:%S") if isinstance(x, str) and x else ''
+            )
+        
+        # Format duration
         display_df["duration"] = display_df["duration"].apply(lambda x: f"{x // 60}m {x % 60}s")
         
-        # Drop the AI actions column before display
+        # Drop complex columns before display
         display_cols = ["id", "phone", "service", "start_time", "duration", "status"]
         
         # Call ID Search 
@@ -576,11 +401,6 @@ with history_tab:
                 display_df = matching_calls
             else:
                 st.warning(f"No calls matching '{search_id}' found")
-        
-        # Create dataframe with clickable Call IDs
-        def handle_row_click(row):
-            st.session_state.selected_call_id = row["id"]
-            st.experimental_rerun()
         
         # Display the table
         st.dataframe(
@@ -612,7 +432,7 @@ with history_tab:
                 selected_call = st.selectbox("Select Call", call_options, key="manual_call_select")
                 if st.button("View Details", key="view_selected"):
                     st.session_state.selected_call_id = selected_call
-                    st.rerun()
+                    st.experimental_rerun()
                     
         with col6:
             # Random call button for demo purposes
@@ -620,7 +440,7 @@ with history_tab:
                 if filtered_recent_calls:
                     random_idx = random.randint(0, len(filtered_recent_calls) - 1)
                     st.session_state.selected_call_id = filtered_recent_calls[random_idx]["id"]
-                    st.rerun()
+                    st.experimental_rerun()
         
         st.info("Enter a Call ID in the search box or use the selector to view details")
     else:
@@ -644,6 +464,13 @@ if st.session_state.selected_call_id:
             status_class = "status-active" if selected_call["status"] == "Active" else "status-completed" if selected_call["status"] == "Completed" else "status-failed"
             card_class = "active-call" if selected_call["status"] == "Active" else "completed-call" if selected_call["status"] == "Completed" else "failed-call"
             
+            # Format timestamps
+            if isinstance(selected_call["start_time"], str):
+                start_time = datetime.fromisoformat(selected_call["start_time"].replace('Z', '+00:00'))
+                start_time_str = start_time.strftime("%Y-%m-%d %H:%M:%S")
+            else:
+                start_time_str = selected_call["start_time"].strftime("%Y-%m-%d %H:%M:%S")
+            
             st.markdown(f"""
             <div class="call-card {card_class}">
                 <div class="call-header">
@@ -652,13 +479,30 @@ if st.session_state.selected_call_id:
                 <div class="call-info">
                     <strong>Phone:</strong> {selected_call["phone"]}<br>
                     <strong>Service:</strong> {selected_call["service"]}<br>
-                    <strong>Started:</strong> {selected_call["start_time"].strftime("%Y-%m-%d %H:%M:%S")}<br>
+                    <strong>Started:</strong> {start_time_str}<br>
                     <strong>Duration:</strong> {selected_call["duration"] // 60}m {selected_call["duration"] % 60}s<br>
                     <strong>Agent ID:</strong> {selected_call["agent_id"]}<br>
-                    <strong>Success Rate:</strong> {selected_call["success_rate"]:.1f}%
+                    <strong>Success Rate:</strong> {selected_call.get("success_rate", 0):.1f}%
                 </div>
             </div>
             """, unsafe_allow_html=True)
+            
+            # Add control buttons if call is active
+            if selected_call["status"] == "Active":
+                if st.button("Advance Call", key="detail_advance"):
+                    api_client.simulate_call_progress(selected_call["id"])
+                    st.experimental_rerun()
+                
+                col_a, col_b = st.columns(2)
+                with col_a:
+                    if st.button("End Call (Success)", key="end_success"):
+                        api_client.simulate_end_call(selected_call["id"], True)
+                        st.experimental_rerun()
+                
+                with col_b:
+                    if st.button("End Call (Fail)", key="end_fail"):
+                        api_client.simulate_end_call(selected_call["id"], False)
+                        st.experimental_rerun()
         
         with col2:
             # Basic call information
@@ -667,9 +511,9 @@ if st.session_state.selected_call_id:
             with col_a:
                 st.metric("Duration", f"{selected_call['duration'] // 60}m {selected_call['duration'] % 60}s")
             with col_b:
-                st.metric("Success Rate", f"{selected_call['success_rate']:.1f}%")
+                st.metric("Success Rate", f"{selected_call.get('success_rate', 0):.1f}%")
             with col_c:
-                st.metric("AI Actions", len(selected_call['ai_actions']))
+                st.metric("AI Actions", len(selected_call.get('ai_actions', [])))
         
         # Tabs for call details
         action_tab, transcript_tab = st.tabs(["AI Actions", "Call Transcript"])
@@ -679,47 +523,70 @@ if st.session_state.selected_call_id:
             st.markdown("Powered by **browser-use** - [github.com/browser-use/browser-use](https://github.com/browser-use/browser-use)")
             
             # Display all actions
-            for i, action in enumerate(selected_call['ai_actions']):
-                success_class = "ai-action-success" if action["success"] else "ai-action-fail"
-                success_text = "✅ Success" if action["success"] else "❌ Failed"
-                
-                st.markdown(f"""
-                <div class="ai-action-card {success_class}">
-                    <div class="ai-action-title">
-                        {i+1}. {action["action"]} - {success_text} ({action["duration"]}s)
+            ai_actions = selected_call.get('ai_actions', [])
+            if not ai_actions:
+                st.info("No AI actions recorded for this call yet.")
+            else:
+                for i, action in enumerate(ai_actions):
+                    success_class = "ai-action-success" if action.get("success", True) else "ai-action-fail"
+                    success_text = "✅ Success" if action.get("success", True) else "❌ Failed"
+                    
+                    # Format timestamp
+                    if isinstance(action.get("timestamp"), str):
+                        action_time = datetime.fromisoformat(action["timestamp"].replace('Z', '+00:00'))
+                        action_time_str = action_time.strftime("%H:%M:%S")
+                    else:
+                        action_time_str = action.get("timestamp", datetime.now()).strftime("%H:%M:%S")
+                    
+                    st.markdown(f"""
+                    <div class="ai-action-card {success_class}">
+                        <div class="ai-action-title">
+                            {i+1}. {action.get("action", "Unknown Action")} - {success_text} ({action.get("duration", 0)}s)
+                        </div>
+                        <div class="ai-action-details">
+                            {action_time_str} - {action.get("details", "No details available")}
+                        </div>
                     </div>
-                    <div class="ai-action-details">
-                        {action["timestamp"].strftime("%H:%M:%S")} - {action["details"]}
-                    </div>
-                </div>
-                """, unsafe_allow_html=True)
-                
-                # Show screenshot - use expander to save space
-                with st.expander("Show screenshot"):
-                    st.image(action["screenshot"], use_column_width=True)
+                    """, unsafe_allow_html=True)
+                    
+                    # Show screenshot if available - use placeholder for demo
+                    with st.expander("Show screenshot"):
+                        screenshot = action.get("screenshot", "https://via.placeholder.com/600x400?text=Screenshot+Placeholder")
+                        st.image(screenshot, use_column_width=True)
         
         with transcript_tab:
             st.markdown("#### Call Transcript")
-            # Generate a sample transcript based on the service
-            st.markdown("""
-            **System**: Hello, welcome to SpeakWise. How can I help you today?  
-            **User**: I need help with getting a business registration certificate.  
-            **System**: I'd be happy to help you apply for a business registration certificate. Can you tell me the name of your business?  
-            **User**: Yes, it's called 'Akagera Tours and Travel'.  
-            **System**: Thank you. And what type of business is Akagera Tours and Travel?  
-            **User**: It's a tour company.  
-            **System**: Great. I'll need a few more details to complete your application. What's your full name as the business owner?
-            **User**: My name is Jean-Claude Mutabazi.
-            **System**: Thank you, Jean-Claude. Could you provide your national ID number?
-            **User**: Yes, it's 1198780012345678.
-            **System**: Perfect. Now I need your business address.
-            **User**: It's KN 5 Ave, Kigali, Rwanda.
-            **System**: Thank you. I'm now going to process this information and complete your business registration application. This will take a few minutes.
-            [Processing...]
-            **System**: I've successfully completed your business registration. Your application reference number is BR-2023-78901. You'll receive the official certificate via SMS within 3 business days. Is there anything else you need help with?
-            **User**: No, that's all. Thank you!
-            **System**: You're welcome! Thank you for using SpeakWise. Have a great day!
-            """)
+            
+            # Display transcript
+            transcript = selected_call.get('transcript', [])
+            if not transcript:
+                st.info("No transcript available for this call yet.")
+            else:
+                for entry in transcript:
+                    role = entry.get("role", "unknown")
+                    content = entry.get("content", "")
+                    
+                    # Format timestamp
+                    if isinstance(entry.get("timestamp"), str):
+                        entry_time = datetime.fromisoformat(entry["timestamp"].replace('Z', '+00:00'))
+                        entry_time_str = entry_time.strftime("%H:%M:%S")
+                    else:
+                        entry_time_str = entry.get("timestamp", datetime.now()).strftime("%H:%M:%S")
+                    
+                    if role == "system":
+                        st.markdown(f"**System** ({entry_time_str}): {content}")
+                    elif role == "user":
+                        st.markdown(f"**User** ({entry_time_str}): {content}", help="User spoke this")
+                    elif role == "processing":
+                        st.info(f"**Processing**: {content}")
+            
+            # Add custom message if call is active
+            if selected_call["status"] == "Active":
+                custom_message = st.text_input("Add user message:", key="custom_transcript_message")
+                if st.button("Send Message"):
+                    if custom_message:
+                        api_client.simulate_call_progress(selected_call["id"], custom_message)
+                        st.experimental_rerun()
         
         # Action buttons
         col1, col2, col3 = st.columns(3)
@@ -734,7 +601,12 @@ if st.session_state.selected_call_id:
         with col3:
             if st.button("Close Details"):
                 st.session_state.selected_call_id = None
-                st.rerun()
+                st.experimental_rerun()
+    else:
+        st.error(f"Call {st.session_state.selected_call_id} not found. It may have been removed.")
+        if st.button("Clear Selection"):
+            st.session_state.selected_call_id = None
+            st.experimental_rerun()
 
 # Footer
 st.markdown("---")

@@ -163,7 +163,7 @@ st.markdown("# SpeakWise Dashboard")
 st.markdown("Welcome to the SpeakWise control center. Monitor call performance and track service usage.")
 
 # Call Operations Statistics
-st.markdown("## Call Operations Statistics")
+st.markdown("## Call & SMS Operations Statistics")
 
 # Get call and SMS stats directly from loaded data
 call_stats = analytics_data.get("call_stats", {})
@@ -211,32 +211,35 @@ with col2:
     ), unsafe_allow_html=True)
 
 with col3:
-    # Average call duration
-    avg_duration = call_stats.get("avg_duration_seconds", 0)
-    minutes = avg_duration // 60
-    seconds = avg_duration % 60
+    # SMS Delivery Rate metric
+    delivery_rate = sms_stats.get("delivery_rate", 0)
+    trend_class = "metric-trend-up" if delivery_rate >= 90 else "metric-trend-down"
     
     st.markdown("""
-    <div class="metric-card">
-        <div class="metric-label">Avg Call Duration</div>
-        <div class="metric-value">{:d}m {:02d}s</div>
-        <div class="metric-trend">
-            Last 30 days
+    <div class="metric-card" style="border-top: 4px solid #FCBC66;">
+        <div class="metric-label">SMS Delivery Rate</div>
+        <div class="metric-value">{:.1f}%</div>
+        <div class="metric-trend {}">
+            {} Target: 90%
         </div>
     </div>
-    """.format(minutes, seconds), unsafe_allow_html=True)
+    """.format(
+        delivery_rate,
+        trend_class,
+        "✓" if delivery_rate >= 90 else "✗"
+    ), unsafe_allow_html=True)
 
 with col4:
-    # Total calls metric
+    # Total SMS Sent metric
     st.markdown("""
-    <div class="metric-card">
-        <div class="metric-label">Total Calls</div>
+    <div class="metric-card" style="border-top: 4px solid #F97B4F;">
+        <div class="metric-label">Total SMS Sent</div>
         <div class="metric-value">{:,}</div>
         <div class="metric-trend">
             All time
         </div>
     </div>
-    """.format(call_stats.get("total_calls", 0)), unsafe_allow_html=True)
+    """.format(sms_stats.get("total_sent", 0)), unsafe_allow_html=True)
 
 # Call volume trends
 st.markdown("## Call & SMS Volume Trends")

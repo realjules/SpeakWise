@@ -13,6 +13,7 @@ import os
 # Import utility functions
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import get_api_client, get_analytics_manager
+from twilio.rest import Client
 
 st.set_page_config(
     page_title="SMS Tracking | SpeakWise",
@@ -346,13 +347,15 @@ with st.form("send_sms_form"):
     
     with form_col1:
         recipient = st.text_input("Recipient Phone Number", value="+250787641302")
-        sender_id = st.text_input("Sender ID", value="PindoTest", 
-                                help="Use 'PindoTest' or a sender ID that's registered with your Pindo account.")
-        st.info("Note: 'PindoTest' is always available, but custom sender IDs must be registered with Pindo.")
+        from_number = st.text_input("From Phone Number", 
+                                    help="Your Twilio phone number. Leave blank to use the first number from your account.")
         
-        # Input for API key with sensitive flag
-        api_key = st.text_input("Pindo API Key", type="password", 
-                               help="Your Pindo API key. This is required to send real SMS.")
+        # Inputs for Twilio credentials with sensitive flag
+        account_sid = st.text_input("Twilio Account SID", type="password", 
+                                  help="Your Twilio Account SID. This is required to send real SMS.")
+        
+        auth_token = st.text_input("Twilio Auth Token", type="password", 
+                                 help="Your Twilio Auth Token. This is required to send real SMS.")
         
     with form_col2:
         # Get all available services dynamically
@@ -379,75 +382,48 @@ with st.form("send_sms_form"):
     submitted = st.form_submit_button("Send Real SMS")
     
     if submitted:
-        if not api_key:
-            st.error("Pindo API Key is required to send real SMS")
+        if not account_sid or not auth_token:
+            st.error("Twilio Account SID and Auth Token are required to send real SMS")
         else:
             try:
-                # Define a function to send SMS directly without importing PindoAdapter
-                def send_sms_with_pindo(api_key, to_number, message, sender_id):
-                    url = 'https://api.pindo.io/v1/sms/'
-                    headers = {
-                        'Authorization': f'Bearer {api_key}',
-                        'Content-Type': 'application/json'
-                    }
-                    data = {
-                        'to': to_number,
-                        'text': message, 
-                        'sender': sender_id
-                    }
-                    
-                    # Log the request for debugging (but mask the API key)
-                    masked_key = api_key[:4] + "..." + api_key[-4:] if len(api_key) > 8 else "****"
-                    st.info(f"Sending SMS to {to_number} via Pindo with sender ID: {sender_id}")
-                    st.code(f"API Key: {masked_key}\nURL: {url}\nSender: {sender_id}", language="text")
-                    
-                    try:
-                        # Send the SMS
-                        response = requests.post(url, json=data, headers=headers)
-                        
-                        # Check for specific error codes with helpful messages
-                        if response.status_code == 409:
-                            raise Exception(
-                                f"Sender ID '{sender_id}' is not registered with your Pindo account. "
-                                f"Please use 'PindoTest' instead."
-                            )
-                        elif response.status_code == 401:
-                            raise Exception("Invalid or expired API key. Please check your credentials.")
-                        elif response.status_code == 400:
-                            error_detail = response.json().get('detail', 'Bad request')
-                            raise Exception(f"Bad request: {error_detail}")
-                        
-                        # For other errors, raise the standard exception
-                        response.raise_for_status()
-                        
-                        # Return the response JSON
-                        return response.json()
-                    except requests.exceptions.HTTPError as e:
-                        # Extract more details from the response if possible
-                        try:
-                            error_detail = response.json().get('detail', str(e))
-                            raise Exception(f"HTTP Error: {error_detail}")
-                        except:
-                            raise e
-                
                 # Convert message type to snake_case for database
                 db_type = sms_type.lower().replace(" ", "_")
                 
-                # Send the SMS directly using Pindo API
-                with st.spinner(f"Sending SMS to {recipient}..."):
-                    result = send_sms_with_pindo(
-                        api_key=api_key,
-                        to_number=recipient, 
-                        message=message, 
-                        sender_id=sender_id
-                    )
+                # Log the request for debugging (mask credentials)
+                masked_sid = account_sid[:4] + "..." + account_sid[-4:] if len(account_sid) > 8 else "****"
+                masked_token = auth_token[:4] + "..." + auth_token[-4:] if len(auth_token) > 8 else "****"
                 
-                # Generate a unique SMS ID if not returned by API
-                sms_id = result.get('sms_id', f"SMS-{int(time.time())}")
+                st.info(f"Sending SMS to {recipient} via Twilio" + (f" from {from_number}" if from_number else ""))
+                st.code(f"Account SID: {masked_sid}\nAuth Token: {masked_token}", language="text")
+                
+                # Send the SMS directly using Twilio API
+                with st.spinner(f"Sending SMS to {recipient}..."):
+                    # Initialize Twilio client
+                    client = Client(account_sid, auth_token)
+                    
+                    # Create message
+                    twilio_message = client.messages.create(
+                        body=message,
+                        from_=from_number if from_number else None,  # Twilio will use first number if None
+                        to=recipient
+                    )
+                    
+                    # Prepare result
+                    result = {
+                        "sid": twilio_message.sid,
+                        "status": twilio_message.status,
+                        "from": twilio_message.from_,
+                        "to": twilio_message.to,
+                        "body": twilio_message.body,
+                        "date_created": str(twilio_message.date_created)
+                    }
+                
+                # Generate a unique SMS ID based on Twilio's SID
+                sms_id = f"SMS-{twilio_message.sid}"
                 
                 # Show the success message with SMS ID
                 st.success(f"✅ SMS sent successfully to {recipient}!")
-                st.info(f"SMS ID: {sms_id}")
+                st.info(f"SMS ID: {sms_id} | Status: {twilio_message.status}")
                 
                 # Create and add the SMS record to analytics
                 timestamp = datetime.now().isoformat() + "Z"
@@ -458,7 +434,7 @@ with st.form("send_sms_form"):
                     "type": db_type,
                     "status": "delivered",
                     "service": service,
-                    "reference": result.get('id', sms_id)
+                    "reference": twilio_message.sid
                 }
                 
                 # Add the record to analytics

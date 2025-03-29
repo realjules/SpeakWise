@@ -59,24 +59,29 @@ class BrowserUseAgent:
         COMPREHENSIVE IREMBO BIRTH CERTIFICATE APPLICATION PROCESS:
         
         0. WEBSITE LOADING AND PREPARATION:
-           - Navigate to https://irembo.gov.rw/home/citizen/all_services?lang=en
+           - Go directly to this site https://irembo.gov.rw/home/citizen/all_services?lang=en
            - WAIT explicitly for the page to fully load (minimum 10 seconds).
            - IF the page doesn't load, REFRESH the browser and re-check the connection.
         
         1. LANGUAGE CONFIGURATION:
-           - Ensure the system language is set to English.
-           - If not, change it to English before proceeding.
+           - CRITICAL: Look for a language switcher in the top right corner
+           - Identify the current language (could be English or Kinyarwanda)
+           - If in Kinyarwanda, click on "EN" or "English" option
+           - If button shows "ENG", click it to switch to English
+           - Verify language change by checking if main text appears in English
         
         2. LOGIN PROCESS:
-           - Click the "Login" or "Sign In" button.
+           - Click the "Login" or "Sign In" button (if in Kinyarwanda, this will show as "Injira").
            - Use credentials:
-             * Phone Number: {self.phone_number}
-             * Password: {self.password}
+             * Phone Number: {self.phone_number} (field might be labeled "Telefoni" or "Nomero ya telefoni")
+             * Password: {self.password} (field might be labeled "Ijambo ryibanga")
+           - Click the login/submit button (labeled "Injira" in Kinyarwanda or "Login/Sign In" in English)
            - Handle any additional verification steps if prompted.
         
         3. BIRTH CERTIFICATE APPLICATION:
            - Navigate via Family Services > Birth Services.
-           - Select "Birth Certificate" and click "Apply".
+           - IMPORTANT: If interface is in Kinyarwanda, look for "Serivisi z'umuryango" > "Serivisi z'amavuko"
+           - Select "Birth Certificate" (or "Icyemezo cy'amavuko") and click "Apply" (or "Saba").
            - For radio buttons selection (Applicant Type):
              * Look for radio buttons or labels containing "{who}"
              * Click directly on the radio button or its label text
@@ -88,19 +93,29 @@ class BrowserUseAgent:
         
         4. NOTIFICATION SETUP:
            - For notification method selection (radio buttons):
-             * Look for "Phone" or "SMS" option
+             * Look for "Phone"/"SMS" option (or "Telefoni"/"Ubutumwa" in Kinyarwanda)
              * Click directly on the radio button or its label text
            - Use this phone number: {self.phone_number}
+           - If asked for email (imeyili) or phone (telefoni), select according to instructions
         
-        5. FINAL SUBMISSION:
+        5. SUBMISSION:
            - Review all information carefully.
+           - Scroll down the end of the page before you do anything else. 
            - For checkbox confirmation:
              * Look for checkboxes at the bottom of the page
-             * Look specifically for text containing "certify" or "confirm"
+             * Look specifically for text containing "certify"/"confirm" or "Ndemeza"/"Nemeje" in Kinyarwanda
              * Click directly on the checkbox (not just the text)
              * Verify the checkbox is checked (shows checkmark or filled)
-           - Click the SUBMIT button.
+           - Click the SUBMIT button (labeled "Ohereza" or "Saba" in Kinyarwanda).
         
+        6. PAYMENT:
+          - Find and Click "pay" or "Ishyura"
+          - Keep MTN Mobile Money as a payment method when {self.phone_number} start with "078" or "079" otherwise use Airtel Money
+          - Fill {self.phone_number} to "Or just enter your MTN MoMo phone number to pay"
+          - Click "Pay 500 RWF"
+          - The system send a payment request to his phone 
+          - Wait for someone to pay and close the pop-up window
+
         ELEMENT SELECTION TIPS:
            - For checkboxes: Target the actual checkbox element or its container
            - For radio buttons: Click on the circle element itself 
@@ -118,9 +133,8 @@ class BrowserUseAgent:
         # Pass the task to the Agent instance
         agent = Agent(
             task=task,
-            llm=self.llm,
-            #browser=self.browser,
-            verbose=self.verbose
+            llm=self.llm
+            #browser=self.browser
         )
         
         results = await agent.run()
@@ -194,16 +208,14 @@ class BrowserUseAgent:
         # Pass the task to the Agent instance
         agent = Agent(
             task=task,
-            llm=self.llm,
-            # browser=self.browser,
-            #verbose=self.verbose
+            llm=self.llm
+            # browser=self.browser
         )
         
         results = await agent.run()
         if self.verbose:
             print(results)
-        # Close the browser properly after finishing the task
-        await self.browser.close()
+        # Save schema without closing browser (since we don't initialize it)
         with open("schema.json", "w") as json_file:
             json.dump(self.schema, json_file, indent=4)
         return results
@@ -219,23 +231,22 @@ if __name__ == "__main__":
     # Create the agent 
     agent = BrowserUseAgent(verbose=True, headless=False)  # Set headless=False to see the browser
     
-    # Option 1: Register for driving license exam
+    # Option 2: Apply for birth certificate
     result = agent.run_async(
-        agent.register_driving_license_exam(
-            test_type="Registration for Driving Test - Provisional, paper-based",
-            district="Gasabo",
-            preferred_date="2025-07-15"
+        agent.apply_for_birth_certificate(
+            for_self=True,
+            processing_office={"District": "Gasabo", "Sector": "Jali"},
+            reason="Education"
         )
     )
+    print("Birth Certificate Application completed with result:", result)
     
-    print("Driving License Exam Registration completed with result:", result)
-    
-    # Option 2: Apply for birth certificate (kept for reference)
+    # Option 1: Register for driving license exam (commented out)
     # result = agent.run_async(
-    #     agent.apply_for_birth_certificate(
-    #         for_self=True,
-    #         processing_office={"District": "Gasabo", "Sector": "Jali"},
-    #         reason="Education"
+    #     agent.register_driving_license_exam(
+    #         test_type="Registration for Driving Test - Provisional, paper-based",
+    #         district="Gasabo",
+    #         preferred_date="2025-07-15"
     #     )
     # )
-    # print("Application completed with result:", result)
+    # print("Driving License Exam Registration completed with result:", result)

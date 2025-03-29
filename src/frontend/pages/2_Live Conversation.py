@@ -160,15 +160,64 @@ st.markdown("""
         max-width: calc(100% - 50px);
     }
     
-    /* Waveform visualization */
+    /* Microphone and Waveform visualization */
+    .microphone-container {
+        width: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        margin: 20px 0;
+    }
+    
+    .microphone {
+        width: 80px;
+        height: 80px;
+        border-radius: 50%;
+        background-color: #8DC6BF;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        position: relative;
+        overflow: hidden;
+        border: 3px solid #f9f9f9;
+    }
+    
+    .microphone.listening {
+        animation: pulse 1.5s infinite;
+        background-color: #F97B4F;
+    }
+    
+    .microphone i {
+        font-size: 40px;
+        color: white;
+    }
+    
+    @keyframes pulse {
+        0% {
+            transform: scale(1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        50% {
+            transform: scale(1.05);
+            box-shadow: 0 6px 12px rgba(0,0,0,0.3);
+        }
+        100% {
+            transform: scale(1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+    }
+    
     .waveform {
-        height: 60px;
+        height: 120px;
         width: 100%;
         position: relative;
-        margin: 20px 0;
-        background-color: #f0f0f0;
+        margin: 10px 0;
+        background-color: #f9f9f9;
         border-radius: 10px;
         overflow: hidden;
+        box-shadow: inset 0 2px 6px rgba(0,0,0,0.1);
     }
     
     .waveform-bars {
@@ -181,9 +230,33 @@ st.markdown("""
     
     .waveform-bar {
         width: 3px;
-        background-color: #1976D2;
+        background-color: #584053;
         border-radius: 3px;
         transition: height 0.2s ease;
+    }
+    
+    .waveform-bar.user {
+        background-color: #FCBC66;
+    }
+    
+    .waveform-bar.ai {
+        background-color: #8DC6BF;
+    }
+    
+    .waveform-label {
+        position: absolute;
+        top: 5px;
+        color: #584053;
+        font-size: 12px;
+        font-weight: bold;
+    }
+    
+    .waveform-label.user {
+        right: 10px;
+    }
+    
+    .waveform-label.ai {
+        left: 10px;
     }
     
     /* Button styling */
@@ -248,29 +321,78 @@ st.markdown("# 🗣️ Live Conversation")
 st.markdown("Real-time visualization of caller conversations with SpeakWise AI")
 
 # Function to simulate waveform visualization
-def generate_waveform_heights(active=False, num_bars=50):
-    if active:
-        # More dynamic heights when active
-        heights = [random.randint(5, 50) for _ in range(num_bars)]
-    else:
-        # More subtle, lower heights when inactive
-        heights = [random.randint(2, 8) for _ in range(num_bars)]
+def generate_waveform_heights(active=False, user_active=False, ai_active=False, num_bars=100):
+    heights = []
+    
+    # Generate heights for user and AI
+    for i in range(num_bars):
+        if i < num_bars / 2:  # First half (AI)
+            if ai_active:
+                # Active AI waveform (left side)
+                height = random.randint(10, 80) if random.random() > 0.2 else random.randint(5, 15)
+            else:
+                # Inactive AI waveform
+                height = random.randint(2, 8)
+        else:  # Second half (User)
+            if user_active:
+                # Active user waveform (right side)
+                height = random.randint(10, 80) if random.random() > 0.2 else random.randint(5, 15)
+            else:
+                # Inactive user waveform
+                height = random.randint(2, 8)
+        heights.append(height)
+    
     return heights
 
-# Function to create a waveform visualization
-def render_waveform(active=False):
-    num_bars = 50
-    heights = generate_waveform_heights(active, num_bars)
+# Function to create an enhanced waveform visualization
+def render_waveform(call_data=None):
+    num_bars = 100
+    
+    # Determine active states based on call data
+    user_active = False
+    ai_active = False
+    
+    if call_data and call_data.get("status") == "Active":
+        # Check the latest message to determine who's speaking
+        if "transcript" in call_data and call_data["transcript"]:
+            latest_message = call_data["transcript"][-1]
+            if latest_message["role"] == "user":
+                user_active = True
+            elif latest_message["role"] == "system":
+                ai_active = True
+    
+    heights = generate_waveform_heights(active=True, user_active=user_active, ai_active=ai_active, num_bars=num_bars)
     
     html = """
     <div class="waveform">
+        <span class="waveform-label ai">SpeakWise AI</span>
+        <span class="waveform-label user">User</span>
         <div class="waveform-bars">
     """
     
-    for height in heights:
-        html += f'<div class="waveform-bar" style="height: {height}px;"></div>'
+    for i, height in enumerate(heights):
+        # Set the class based on position (left half is AI, right half is user)
+        bar_class = "waveform-bar ai" if i < num_bars / 2 else "waveform-bar user"
+        html += f'<div class="{bar_class}" style="height: {height}px;"></div>'
     
     html += """
+        </div>
+    </div>
+    """
+    
+    return html
+
+# Function to render the microphone visualization
+def render_microphone(is_listening=False):
+    listening_class = "listening" if is_listening else ""
+    
+    html = f"""
+    <div class="microphone-container">
+        <div class="microphone {listening_class}">
+            <i>🎤</i>
+        </div>
+        <div style="text-align: center; font-weight: bold; margin-bottom: 10px;">
+            {("LISTENING..." if is_listening else "CALL ACTIVE")}
         </div>
     </div>
     """
@@ -510,8 +632,33 @@ with right_col:
             st.markdown(f"**Progress**: Step {call_data['current_step']} of {call_data['total_steps']}")
             st.progress(value=call_data["current_step"]/call_data["total_steps"])
             
-            # Conversation display
-            st.markdown("### Conversation")
+            # Live conversation visualization with microphone and waveform
+            st.markdown("### Live Conversation Stream")
+            
+            # Create containers for our visualizations
+            mic_container = st.empty()
+            waveform_container = st.empty()
+            
+            # Determine if someone is speaking (for mic animation)
+            is_speaking = False
+            is_user_speaking = False
+            if call_data["status"] == "Active" and "transcript" in call_data and call_data["transcript"]:
+                latest_message = call_data["transcript"][-1]
+                # Consider it active speaking if the message is very recent (within 5 seconds)
+                if "timestamp" in latest_message:
+                    try:
+                        message_time = datetime.fromisoformat(latest_message["timestamp"].replace('Z', '+00:00'))
+                        is_speaking = (datetime.now().replace(tzinfo=None) - message_time.replace(tzinfo=None)).total_seconds() < 5
+                        is_user_speaking = is_speaking and latest_message["role"] == "user"
+                    except:
+                        pass
+            
+            # Render microphone and waveform visualizations
+            mic_container.markdown(render_microphone(is_speaking), unsafe_allow_html=True)
+            waveform_container.markdown(render_waveform(call_data), unsafe_allow_html=True)
+            
+            # Conversation transcript display
+            st.markdown("### Conversation Transcript")
             conversation_placeholder = st.empty()
             conversation_placeholder.markdown(render_conversation_messages(call_data), unsafe_allow_html=True)
             

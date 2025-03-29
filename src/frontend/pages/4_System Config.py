@@ -466,11 +466,11 @@ elif config_section == "Telephony Integration":
     with col1:
         st.subheader("Telephony Provider")
         
-        provider_options = ["Twilio", "Africa's Talking", "Vonage", "Custom"]
+        provider_options = ["Twilio", "Africa's Talking", "Pindo", "Vonage", "Custom"]
         selected_provider = st.selectbox(
             "Select Provider",
             provider_options,
-            provider_options.index(config["telephony"]["provider"])
+            provider_options.index(config["telephony"]["provider"]) if config["telephony"]["provider"] in provider_options else 0
         )
         
         st.subheader("Phone Configuration")
@@ -478,11 +478,29 @@ elif config_section == "Telephony Integration":
         
         # Provider-specific fields
         if selected_provider == "Twilio":
-            account_sid = st.text_input("Account SID", config["telephony"]["account_sid"])
-            auth_token = st.text_input("Auth Token", config["telephony"]["auth_token"], type="password")
+            account_sid = st.text_input("Account SID", config["telephony"]["account_sid"] if config["telephony"]["provider"] == "Twilio" else "")
+            auth_token = st.text_input("Auth Token", config["telephony"]["auth_token"] if config["telephony"]["provider"] == "Twilio" else "", type="password")
         elif selected_provider == "Africa's Talking":
-            api_key = st.text_input("API Key", "af67d939c7639f989e7834a092d5" if selected_provider != config["telephony"]["provider"] else "", type="password")
-            username = st.text_input("Username", "irembovai" if selected_provider != config["telephony"]["provider"] else "")
+            api_key = st.text_input("API Key", config["telephony"].get("api_key", "") if config["telephony"]["provider"] == "Africa's Talking" else "", type="password")
+            username = st.text_input("Username", config["telephony"].get("username", "") if config["telephony"]["provider"] == "Africa's Talking" else "")
+        elif selected_provider == "Pindo":
+            pindo_api_key = st.text_input(
+                "Pindo API Key", 
+                config["telephony"].get("pindo_api_key", "") if config["telephony"]["provider"] == "Pindo" else "", 
+                type="password",
+                help="Your Pindo API key for SMS and voice calls"
+            )
+            sender_id = st.text_input(
+                "Default Sender ID", 
+                config["telephony"].get("sender_id", "PindoTest") if config["telephony"]["provider"] == "Pindo" else "PindoTest",
+                help="Default sender ID for SMS messages. 'PindoTest' is available by default."
+            )
+            sms_templates = st.text_area(
+                "SMS Templates (JSON)",
+                config["telephony"].get("sms_templates", '{\n  "welcome": "Welcome to SpeakWise! We are here to help you with government services.",\n  "receipt": "Thank you for your payment of {amount} RWF for {service}. Reference: {ref}"\n}') if config["telephony"]["provider"] == "Pindo" else '{\n  "welcome": "Welcome to SpeakWise! We are here to help you with government services.",\n  "receipt": "Thank you for your payment of {amount} RWF for {service}. Reference: {ref}"\n}',
+                height=150,
+                help="JSON object of template names and text"
+            )
     
     with col2:
         st.subheader("Call Handling")
@@ -493,13 +511,23 @@ elif config_section == "Telephony Integration":
         st.subheader("Messages")
         greeting_message = st.text_area("Greeting Message", config["telephony"]["greeting_message"])
         
-        # Test connection
-        st.subheader("Test Connection")
-        if st.button("Test Telephony Integration"):
-            st.success("Connection successful! Phone system is operational.")
+        # Show test section based on provider
+        st.subheader("Test Integration")
+        
+        if selected_provider == "Pindo":
+            st.info("For Pindo, you can test SMS sending directly after saving configuration.")
+            test_recipient = st.text_input("Test recipient phone number", phone_number)
+            test_message = st.text_input("Test message", "This is a test message from SpeakWise.")
+        else:
+            # Generic test for other providers
+            if st.button("Test Telephony Integration"):
+                st.success("Connection successful! Phone system is operational.")
     
     # Save changes
     if st.button("Save Telephony Configuration"):
+        # Initialize validation flag
+        save_failed = False
+        
         # Update config
         config["telephony"]["provider"] = selected_provider
         config["telephony"]["phone_number"] = phone_number
@@ -508,11 +536,76 @@ elif config_section == "Telephony Integration":
         config["telephony"]["call_timeout"] = call_timeout
         config["telephony"]["greeting_message"] = greeting_message
         
+        # Clear provider-specific fields to avoid confusion
+        keys_to_remove = ["account_sid", "auth_token", "api_key", "username", "pindo_api_key", "sender_id", "sms_templates"]
+        for key in keys_to_remove:
+            if key in config["telephony"]:
+                del config["telephony"][key]
+        
+        # Add provider-specific fields
         if selected_provider == "Twilio":
             config["telephony"]["account_sid"] = account_sid
             config["telephony"]["auth_token"] = auth_token
+        elif selected_provider == "Africa's Talking":
+            config["telephony"]["api_key"] = api_key
+            config["telephony"]["username"] = username
+        elif selected_provider == "Pindo":
+            config["telephony"]["pindo_api_key"] = pindo_api_key
+            config["telephony"]["sender_id"] = sender_id
+            
+            # Validate and save SMS templates
+            try:
+                # Parse JSON to validate
+                templates_json = json.loads(sms_templates)
+                config["telephony"]["sms_templates"] = sms_templates
+                
+                # Add validation indicator
+                if len(templates_json) > 0:
+                    st.success(f"Successfully validated {len(templates_json)} SMS templates!")
+            except json.JSONDecodeError as e:
+                st.error(f"Invalid JSON format in SMS Templates: {str(e)}")
+                # Don't save if JSON is invalid
+                save_failed = True
         
-        save_config(config)
+        # Save only if there were no validation errors
+        if not save_failed:
+            save_config(config)
+        else:
+            st.error("Configuration not saved due to validation errors. Please fix the issues and try again.")
+        
+        # Add a test SMS button if Pindo is selected, API key is provided, and save was successful
+        if selected_provider == "Pindo" and pindo_api_key and not save_failed:
+            st.success("Pindo configuration saved! You can now send SMS messages.")
+            
+            # Define test function
+            def test_sms(api_key, to_number, message, sender_id):
+                url = 'https://api.pindo.io/v1/sms/'
+                headers = {
+                    'Authorization': f'Bearer {api_key}',
+                    'Content-Type': 'application/json'
+                }
+                data = {
+                    'to': to_number,
+                    'text': message, 
+                    'sender': sender_id
+                }
+                response = requests.post(url, json=data, headers=headers)
+                response.raise_for_status()
+                return response.json()
+            
+            # Test SMS button
+            if st.button("Send Test SMS"):
+                try:
+                    with st.spinner(f"Sending test SMS to {test_recipient}..."):
+                        result = test_sms(
+                            pindo_api_key,
+                            test_recipient,
+                            test_message,
+                            sender_id
+                        )
+                        st.success(f"Test SMS sent successfully! Message ID: {result.get('sms_id', 'unknown')}")
+                except Exception as e:
+                    st.error(f"Failed to send test SMS: {str(e)}")
 
 # LLM Settings
 elif config_section == "LLM Settings":

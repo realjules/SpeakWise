@@ -1,319 +1,47 @@
 {
-  "active_calls": [
-    {
-      "id": "CALL-8d46",
-      "phone": "+2507855a41cf",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:43:00.423680",
-      "duration": 0,
-      "status": "Active",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-5c5",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:43:00.423680"
-        }
-      ]
-    },
-    {
-      "id": "CALL-d2c9",
-      "phone": "+25078abb879a",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:44:00.465943",
-      "duration": 0,
-      "status": "Active",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-dad",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:44:00.465943"
-        }
-      ]
-    }
-  ],
+  "active_calls": [],
   "recent_calls": [
     {
-      "id": "CALL-5d64",
-      "phone": "+250786699755",
+      "id": "CALL-a6e1",
+      "phone": "+25078276f7bf",
       "service": "Business Registration",
-      "start_time": "2025-03-29T03:42:00.484111",
+      "start_time": "2025-03-29T03:55:00.507501",
       "duration": 0,
       "status": "Completed",
       "current_step": 1,
       "total_steps": 5,
-      "agent_id": "AGT-0d6",
+      "agent_id": "AGT-c5e",
       "ai_actions": [],
       "success_rate": 100.0,
       "transcript": [
         {
           "role": "system",
           "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:42:00.484111"
+          "timestamp": "2025-03-29T03:55:00.507501"
         }
       ],
-      "end_time": "2025-03-29T03:43:30.441383"
+      "end_time": "2025-03-29T03:55:30.097513"
     },
     {
-      "id": "CALL-d5cb",
-      "phone": "+2507834dd895",
+      "id": "CALL-c1d4",
+      "phone": "+25078c5de8ab",
       "service": "Business Registration",
-      "start_time": "2025-03-29T03:42:00.370566",
+      "start_time": "2025-03-29T03:55:00.355004",
       "duration": 0,
       "status": "Completed",
       "current_step": 1,
       "total_steps": 5,
-      "agent_id": "AGT-1d7",
+      "agent_id": "AGT-eec",
       "ai_actions": [],
       "success_rate": 100.0,
       "transcript": [
         {
           "role": "system",
           "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:42:00.370566"
+          "timestamp": "2025-03-29T03:55:00.355004"
         }
       ],
-      "end_time": "2025-03-29T03:42:30.401973"
-    },
-    {
-      "id": "CALL-8f56",
-      "phone": "+250788f95f0c",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:41:00.352793",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-e54",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:41:00.352793"
-        }
-      ],
-      "end_time": "2025-03-29T03:41:30.443968"
-    },
-    {
-      "id": "CALL-e798",
-      "phone": "+250782b7a7dc",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:41:00.290113",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-4f5",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:41:00.290113"
-        }
-      ],
-      "end_time": "2025-03-29T03:41:30.348992"
-    },
-    {
-      "id": "CALL-a2e5",
-      "phone": "+250781532d9a",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:40:00.217199",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-c86",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:40:00.217199"
-        }
-      ],
-      "end_time": "2025-03-29T03:40:30.432048"
-    },
-    {
-      "id": "CALL-a1bd",
-      "phone": "+250786a435a1",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:40:00.071182",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-4cb",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:40:00.071182"
-        }
-      ],
-      "end_time": "2025-03-29T03:40:30.301950"
-    },
-    {
-      "id": "CALL-f063",
-      "phone": "+250786eca686",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:39:00.443666",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-9e6",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:39:00.443666"
-        }
-      ],
-      "end_time": "2025-03-29T03:40:30.245899"
-    },
-    {
-      "id": "CALL-eec3",
-      "phone": "+250782304aeb",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:40:00.106820",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-e01",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:40:00.106820"
-        }
-      ],
-      "end_time": "2025-03-29T03:40:30.224845"
-    },
-    {
-      "id": "CALL-15b2",
-      "phone": "+25078068f3a6",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:39:00.032328",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-fda",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:39:00.032328"
-        }
-      ],
-      "end_time": "2025-03-29T03:40:30.221319"
-    },
-    {
-      "id": "CALL-3b3b",
-      "phone": "+250785282fb4",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:39:00.002161",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-534",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:39:00.002161"
-        }
-      ],
-      "end_time": "2025-03-29T03:39:30.253129"
-    },
-    {
-      "id": "CALL-8518",
-      "phone": "+25078d8f0557",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:39:00.189910",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-b07",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:39:00.189910"
-        }
-      ],
-      "end_time": "2025-03-29T03:39:30.152143"
-    },
-    {
-      "id": "CALL-19a2",
-      "phone": "+2507872b1b8a",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:38:00.473209",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-056",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:38:00.473209"
-        }
-      ],
-      "end_time": "2025-03-29T03:38:30.316005"
-    },
-    {
-      "id": "CALL-1622",
-      "phone": "+25078902bc89",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T03:38:00.291688",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-f08",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T03:38:00.291688"
-        }
-      ],
-      "end_time": "2025-03-29T03:38:30.147369"
+      "end_time": "2025-03-29T03:55:30.049426"
     }
   ]
 }

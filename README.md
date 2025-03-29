@@ -1,182 +1,107 @@
-# System Architecture
+# SpeakWise
+
+Voice AI Agent for Irembo e-government services in Rwanda.
 
 ## Overview
 
-The Irembo Voice AI Agent is structured around three main components that work together to enable phone-based access to government services.
+SpeakWise is a voice-based AI agent that helps users access e-government services in Rwanda through the Irembo platform. The system allows users to make requests by voice, which are then processed by an AI agent that navigates the Irembo website to complete the task.
 
-```mermaid
-graph TD
-    User[User with Phone] -->|Makes call| TelSys[Telephony Interface]
-    
-    subgraph "Frontend System - Jules"
-        TelSys -->|Routes audio| AudioRouter[Audio Router]
-        AudioRouter -->|Streams| CallMgr[Call Manager]
-        CallMgr --> Dashboard[Admin Dashboard]
-        Dashboard --> Analytics[Real-time Analytics]
-    end
-    
-    AudioRouter -->|Audio streams| CoreSTT[Speech-to-Text]
-    
-    subgraph "Core Engine - Floris"
-        CoreSTT -->|Text| LLM[LLM Service]
-        LLM -->|Responses| CoreTTS[Text-to-Speech]
-        CoreTTS -->|Speech| AudioRouter
-        
-        LLM <-->|Intents| Orchestrator[Agent Orchestrator]
-        Orchestrator <--> SessionMgr[Session Manager]
-        Orchestrator -->|Actions| AgentAPI[Agent API]
-    end
-    
-    AgentAPI -->|Commands| BrowserCore[Browser Core]
-    
-    subgraph "Browser-based AI Agent - Leonard"
-        BrowserCore --> Navigator[Web Navigator]
-        BrowserCore --> FormFiller[Form Filler]
-        BrowserCore --> PaymentProc[Payment Processor]
-        BrowserCore --> DocCapture[Document Capture]
-        
-        Navigator -->|Controls| Browser[Headless Browser]
-        FormFiller -->|Populates| Browser
-        PaymentProc -->|Processes| Browser
-        DocCapture -->|Extracts from| Browser
-    end
-    
-    Browser -->|Interacts with| Irembo[Irembo Website]
-    DocCapture -->|Sends to| WhatsApp[WhatsApp Service]
-    WhatsApp -->|Delivers to| UserWA[User's WhatsApp]
-    
-    SessionMgr <-->|Stores/retrieves| DB[(Database)]
-    Analytics -->|Reads from| DB
-    
-    classDef frontend fill:#bbdefb,stroke:#1565c0,stroke-width:2px
-    classDef core fill:#c8e6c9,stroke:#2e7d32,stroke-width:2px
-    classDef browser fill:#ffecb3,stroke:#ff8f00,stroke-width:2px
-    classDef external fill:#e0e0e0,stroke:#616161,stroke-width:2px
-    classDef database fill:#e1bee7,stroke:#6a1b9a,stroke-width:2px
-    classDef user fill:#e3f2fd,stroke:#1565c0,stroke-width:2px
-    
-    class User user
-    class TelSys,AudioRouter,CallMgr,Dashboard,Analytics frontend
-    class CoreSTT,LLM,CoreTTS,Orchestrator,SessionMgr,AgentAPI core
-    class BrowserCore,Navigator,FormFiller,PaymentProc,DocCapture,Browser browser
-    class Irembo,WhatsApp,UserWA external
-    class DB database
+## System Components
+
+- **Browser Agent**: Automates interactions with the Irembo website
+- **SMS Notifications**: Sends status updates to users via SMS
+- **Dashboard**: Monitors system activity and performance
+
+## Setup Instructions
+
+### 1. Environment Setup
+
+Create a `.env` file with the following variables:
+
+```
+# Authentication credentials
+PASSWORD=your_password_here
+PHONE_NUMBER=your_phone_number_here
+NATIONAL_ID=your_national_id_here
+
+# API Keys
+OPENAI_API_KEY=your_openai_api_key_here
+PINDO_API_KEY=your_pindo_api_key_here
+PINDO_SENDER_ID=SpeakWise
+
+# Optional configuration
+HEADLESS=false  # Set to false to see browser when running scripts
 ```
 
-## Components
+### 2. Install Dependencies
 
-### 1. Frontend System (Jules)
+```bash
+pip install -r requirements.txt
+```
 
-Handles all user interactions and provides administrative interfaces.
+## Running the Browser Agent
 
-* **Telephony Interface**
-  * Processes incoming and outgoing calls
-  * Routes audio streams to/from the core engine
-  * Uses Twilio or Africa's Talking API for call handling
+The browser agent can be run with the following command:
 
-* **Admin Web Portal**
-  * Monitors active sessions
-  * Provides system configuration
-  * Manages service workflows
+```bash
+python scripts/run_browser_agent.py --service birth_certificate --district Gasabo --sector Jali
+```
 
-* **Real-time Dashboard**
-  * Visualizes call volumes and success rates
-  * Shows agent activities in real-time
-  * Tracks key performance metrics
+### Available Services
 
-### 2. Core Engine (Floris)
+- `birth_certificate`: Apply for a birth certificate
+- `driving_license`: Register for a driving license exam
 
-Acts as the central intelligence, processing speech and coordinating actions.
+### Command Line Options
 
-* **LLM Service with TTS/STT**
-  * Converts user speech to text
-  * Processes natural language to determine intent
-  * Generates responses as text
-  * Converts text responses back to speech
+- `--service`: Service to run (birth_certificate or driving_license)
+- `--for-self`: Whether the birth certificate is for self (default: True)
+- `--district`: District for processing office (default: Gasabo)
+- `--sector`: Sector for processing office (default: Jali)
+- `--reason`: Reason for application (default: Education)
+- `--test-type`: Type of driving test
+- `--headless`: Run in headless mode
+- `--model`: LLM model to use (default: gpt-4o)
+- `--verbose`: Enable verbose output
+- `--disable-sms`: Disable SMS notifications
+- `--disable-dashboard`: Disable dashboard updates
 
-* **Agent Orchestrator**
-  * Plans the sequence of actions based on user intent
-  * Maintains conversation context
-  * Handles error recovery
-  * Routes commands to the browser agent
+## Running the Dashboard
 
-* **Session Manager**
-  * Maintains state between interactions
-  * Handles user authentication
-  * Tracks progress through multi-step processes
-  * Manages data persistence
+To start the dashboard:
 
-### 3. Browser-based AI Agent (Leonard)
+```bash
+python scripts/run_dashboard.py
+```
 
-Interacts with the Irembo website to execute user requests.
+## System Architecture
 
-* **Web Navigation Module**
-  * Automates browser interactions
-  * Handles site navigation
-  * Manages authentication with Irembo
-  * Handles dynamic page elements
+The SpeakWise system is structured around three main components:
 
-* **Form Filling Module**
-  * Maps user information to form fields
-  * Handles complex form validation
-  * Adjusts for different service requirements
-  * Captures errors and feedback
+1. **Frontend System**
+   - Handles user interactions and administrative interfaces
+   - Provides dashboard for monitoring system activity
 
-* **Payment Processing**
-  * Integrates with payment workflows
-  * Handles payment verification
-  * Captures receipts and confirmations
-  * Processes mobile money transactions
+2. **Core Engine**
+   - Processes natural language to determine user intent
+   - Coordinates actions between components
 
-### 4. External Systems
+3. **Browser-based AI Agent**
+   - Interacts with the Irembo website to execute user requests
+   - Uses AI to navigate through complex forms
 
-* **Irembo Website**
-  * Target platform that the browser agent interacts with
-  * Source of government services and forms
-  * Payment processing system
+## Integration Features
 
-* **WhatsApp API**
-  * Delivery channel for documents and confirmations
-  * Secondary communication channel
-  * Provides status updates and notifications
+The system integrates multiple components to provide a seamless experience:
 
-* **Database**
-  * Stores user session information
-  * Records transaction history
-  * Logs system activities
-  * Maintains configuration settings
+- **SMS Integration**: Automatic notifications are sent when tasks are completed
+- **Dashboard Integration**: All activity is tracked and displayed in the dashboard
+- **Analytics**: System performance metrics are collected and visualized
 
-## Data Flow
+## License
 
-1. **Call Initiation**
-   * User calls the system phone number
-   * Telephony system answers and establishes a session
-   * Audio stream is connected to the Core Engine
+This project is proprietary and confidential. All rights reserved.
 
-2. **Service Selection**
-   * LLM processes user's spoken request
-   * Intent is determined and service workflow is selected
-   * Agent Orchestrator begins planning necessary steps
+## Contact
 
-3. **Information Collection**
-   * Core Engine engages in dialog to collect required information
-   * Session Manager stores collected data
-   * Validation is performed on user inputs
-
-4. **Service Execution**
-   * Browser Agent navigates to appropriate Irembo service
-   * Form Filling Module completes necessary forms
-   * Payment Processing handles any required payments
-
-5. **Completion and Delivery**
-   * Browser Agent captures confirmation and documents
-   * Documents are delivered to user via WhatsApp
-   * Call concludes with summary and next steps
-
-## Team Responsibilities
-
-The system architecture is designed to allow parallel development by our three-person team:
-
-* **Jules**: Frontend System and External Integrations
-* **Floris**: Core Engine and Dialog Management
-* **Leonard**: Browser-based Agent and Web Automation
+For questions or support, please contact the SpeakWise team.

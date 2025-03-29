@@ -1,26 +1,6 @@
 {
   "active_calls": [
     {
-      "id": "CALL-c2ff",
-      "phone": "+250781889fb3",
-      "service": "Business Registration",
-      "start_time": "2025-03-30T00:47:00.476330",
-      "duration": 0,
-      "status": "Active",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-b95",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-30T00:47:00.476330"
-        }
-      ]
-    },
-    {
       "id": "CALL-53e9",
       "phone": "+25078eb64422",
       "service": "Business Registration",
@@ -99,9 +79,50 @@
           "timestamp": "2025-03-30T01:06:00.206879"
         }
       ]
+    },
+    {
+      "id": "CALL-6262",
+      "phone": "+250788fbbe5f",
+      "service": "Business Registration",
+      "start_time": "2025-03-30T01:07:00.280680",
+      "duration": 0,
+      "status": "Active",
+      "current_step": 1,
+      "total_steps": 5,
+      "agent_id": "AGT-03f",
+      "ai_actions": [],
+      "success_rate": 100.0,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Hello, welcome to SpeakWise. How can I help you today?",
+          "timestamp": "2025-03-30T01:07:00.280680"
+        }
+      ]
     }
   ],
   "recent_calls": [
+    {
+      "id": "CALL-c2ff",
+      "phone": "+250781889fb3",
+      "service": "Business Registration",
+      "start_time": "2025-03-30T00:47:00.476330",
+      "duration": 0,
+      "status": "Completed",
+      "current_step": 1,
+      "total_steps": 5,
+      "agent_id": "AGT-b95",
+      "ai_actions": [],
+      "success_rate": 100.0,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Hello, welcome to SpeakWise. How can I help you today?",
+          "timestamp": "2025-03-30T00:47:00.476330"
+        }
+      ],
+      "end_time": "2025-03-30T01:06:30.243506"
+    },
     {
       "id": "CALL-def5",
       "phone": "+25078f87d48b",
@@ -500,27 +521,6 @@
         }
       ],
       "end_time": "2025-03-30T00:15:30.289100"
-    },
-    {
-      "id": "CALL-611f",
-      "phone": "+250780243b23",
-      "service": "Business Registration",
-      "start_time": "2025-03-29T23:53:00.483885",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-418",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-29T23:53:00.483885"
-        }
-      ],
-      "end_time": "2025-03-30T00:14:30.241488"
     }
   ]
 }

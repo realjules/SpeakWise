@@ -3,15 +3,17 @@ from langchain_openai import ChatOpenAI
 import asyncio
 import os
 from dotenv import load_dotenv
+import json
 
 class BrowserUseAgent:
-    def __init__(self, api_key=None, model="gpt-4o", verbose=True):
+    def __init__(self, api_key=None, model="gpt-4o", verbose=True, headless=True):
         """
         Initialize the BrowserUseAgent with API key and model.
         
         Args:
             api_key (str, optional): OpenAI API key. Defaults to None.
             model (str, optional): LLM model to use. Defaults to "gpt-4o".
+            verbose (bool, optional): Enable verbose output. Defaults to True.
         """
         load_dotenv()
         
@@ -21,217 +23,219 @@ class BrowserUseAgent:
             
         self.model = model
         self.llm = ChatOpenAI(model=self.model)
+        self.verbose = verbose
         
-        # Safely retrieve environment variables with error handling
         self.password = os.getenv("PASSWORD")
         self.phone_number = os.getenv("PHONE_NUMBER")
         self.national_id = os.getenv("NATIONAL_ID")
-
-        # Configure browser with minimal configuration
-        self.browser = Browser(config=BrowserConfig())
+        
+        # Configure browser with improved settings for form elements
+        # self.browser_config = BrowserConfig(
+        #     viewport_width=1920,
+        #     viewport_height=1080,
+        #     timeout=60000,  # Longer timeout for slow loading elements
+        #     headless=False  # Set to False to see the browser for debugging
+        # )
+        
+        #self.browser = Browser(config=self.browser_config)
         
         # Validate environment variables
         if not all([self.password, self.phone_number, self.national_id]):
             raise ValueError("Missing required environment variables. Please check your .env file.")
+        self.schema = {}
     
     async def apply_for_birth_certificate(self, for_self=True, processing_office=None, reason=None):
         """
         Apply for a birth certificate on Irembo with enhanced robustness.
         """
         who = "Self" if for_self else "Child"
+        self.schema["birth_certificate"] = []
+        # Define schema steps
+        self.schema["birth_certificate"].append({"login credentials": ["phone number or email", "password"]})
+        self.schema["birth_certificate"].append({"Birth services": ["Birth certificate", "Birth record"]})
         
-        # Comprehensive task instructions with enhanced error handling
+        # Task instructions with explicit element selection for checkboxes and radio buttons
         task = f"""
         COMPREHENSIVE IREMBO BIRTH CERTIFICATE APPLICATION PROCESS:
         
         0. WEBSITE LOADING AND PREPARATION:
            - Navigate to https://irembo.gov.rw/home/citizen/all_services?lang=en
-           - WAIT EXPLICITLY for page to fully load (minimum 10 seconds)
-           - IF page doesn't load, REFRESH the browser
-           - Check internet connection stability
+           - WAIT explicitly for the page to fully load (minimum 10 seconds).
+           - IF the page doesn't load, REFRESH the browser and re-check the connection.
         
         1. LANGUAGE CONFIGURATION:
-           - make sure that the language of the system is set to english 
-           - if it is not english change it to english and if set proceed with next steps
+           - Ensure the system language is set to English.
+           - If not, change it to English before proceeding.
         
-      2. LOGIN PROCESS:
-           - Find and click "Login" or "Sign In" button
-           LOGIN CREDENTIALS:
-           - Phone Number: {self.phone_number}
-           - Password: {self.password}
-           
-           VERIFICATION STEPS:
-           - If prompted for additional verification
-           - Be prepared to:
-             * Enter SMS code
-             * Answer security questions
-             * Provide additional identification
+        2. LOGIN PROCESS:
+           - Click the "Login" or "Sign In" button.
+           - Use credentials:
+             * Phone Number: {self.phone_number}
+             * Password: {self.password}
+           - Handle any additional verification steps if prompted.
         
         3. BIRTH CERTIFICATE APPLICATION:
-           - Navigate: Family Services > Birth Services
-           - Select "Birth Certificate"
-           - Click "Apply"
-           
-           APPLICATION DETAILS:
-           - Applicant Type: "{who}"
-           - National ID: {self.national_id}
-           
-           PROCESSING DETAILS:
-           - Office: {processing_office}
-           - Reason: {reason}
-
-        4. choose the phone as way of getting notification (check the box: phone number)and use this phone number: {self.phone_number}
+           - Navigate via Family Services > Birth Services.
+           - Select "Birth Certificate" and click "Apply".
+           - For radio buttons selection (Applicant Type):
+             * Look for radio buttons or labels containing "{who}"
+             * Click directly on the radio button or its label text
+             * Verify selection by checking for visual indicators (filled circle or highlight)
+           - Provide details:
+             * National ID: {self.national_id}
+             * Processing Office: {processing_office}
+             * Reason: {reason}
+        
+        4. NOTIFICATION SETUP:
+           - For notification method selection (radio buttons):
+             * Look for "Phone" or "SMS" option
+             * Click directly on the radio button or its label text
+           - Use this phone number: {self.phone_number}
         
         5. FINAL SUBMISSION:
-           - Carefully review ALL entered information on the rewiew page
-           - Verify each field's accuracy
-           - MOST IMPORTANT: check the box for certifying that all information provided is true, accurate and up to date
-           - click the SUBMIT button 
+           - Review all information carefully.
+           - For checkbox confirmation:
+             * Look for checkboxes at the bottom of the page
+             * Look specifically for text containing "certify" or "confirm"
+             * Click directly on the checkbox (not just the text)
+             * Verify the checkbox is checked (shows checkmark or filled)
+           - Click the SUBMIT button.
         
-        PERFORMANCE INSTRUCTIONS:
-        - Proceed METICULOUSLY and try to be quick please
-        - Read EVERY screen thoroughly
-        - Anticipate potential website complexities
+        ELEMENT SELECTION TIPS:
+           - For checkboxes: Target the actual checkbox element or its container
+           - For radio buttons: Click on the circle element itself 
+           - If direct clicks fail, try clicking on the label text
+           - If element is not visible, scroll to make it visible before clicking
+           - Wait for elements to be interactable before clicking
         """
         
-        # Enhanced Agent Configuration
+        # Update schema
+        self.schema["birth_certificate"].append({"application type": "self or child"})
+        self.schema["birth_certificate"].append("national id")
+        self.schema["birth_certificate"].append({"processing details": [{"office": ["District", "Sector"]}, "reason"]})
+        self.schema["birth_certificate"].append({"notification": "choose phone number or email or both"})
+        
+        # Pass the task to the Agent instance
         agent = Agent(
             task=task,
             llm=self.llm,
-            browser=self.browser
+            #browser=self.browser,
+            verbose=self.verbose
         )
         
         results = await agent.run()
-        print(results)
-        await self.browser.close()
+        if self.verbose:
+            print(results)
+        # Close the agent properly
+        await agent.close()  
         return results
-
-    async def register_driving_license_exam(self, exam_type="B", test_center=None, preferred_date=None):
+     
+    async def register_driving_license_exam(self, test_type=None, district=None, preferred_date=None):
         """
         Register for driving license written exam on Irembo.
-        
-        Args:
-            exam_type (str, optional): Type of driving license (e.g., "B" for standard car). Defaults to "B".
-            test_center (dict, optional): Preferred test center details. Defaults to None.
-            preferred_date (str, optional): Preferred exam date. Defaults to None.
         """
-        # Comprehensive task instructions for driving license exam registration
+        # Task instructions with improved element selection for checkboxes and radio buttons
         task = f"""
         COMPREHENSIVE DRIVING LICENSE WRITTEN EXAM REGISTRATION PROCESS:
         
         0. WEBSITE LOADING AND PREPARATION:
            - Navigate to https://irembo.gov.rw/home/citizen/all_services?lang=en
-           - WAIT EXPLICITLY for page to fully load (minimum 10 seconds)
-           - IF page doesn't load, REFRESH the browser
-           - Check internet connection stability
+           - WAIT explicitly for the page to fully load (minimum 10 seconds).
+           - IF the page doesn't load, REFRESH the browser and verify connection.
         
         1. LANGUAGE CONFIGURATION:
-           - IMMEDIATELY locate and change language to ENGLISH
-           - Look for language selector (usually top-right corner)
-           - If no immediate language option visible, scroll and search carefully
+           - Locate and set the language to English.
         
-        2. INITIAL NAVIGATION:
-           - Close any welcome popups or intervention screens
-           - Navigate to: Transport Services > Driving License Services
-           - Select "Driving License Written Exam Registration"
+        2. LOGIN PROCESS:
+           - Click the "Login" or "Sign In" button.
+           - Use credentials:
+             * Phone Number: {self.phone_number}
+             * Password: {self.password}
         
-        3. LOGIN PROCESS:
-           - Find and click "Login" or "Sign In" button
-           
-           LOGIN CREDENTIALS:
-           - Phone Number: {self.phone_number}
-           - Password: {self.password}
-           
-           VERIFICATION STEPS:
-           - If prompted for additional verification
-           - Be prepared to:
-             * Enter SMS code
-             * Answer security questions
-             * Provide additional identification
+        3. INITIAL NAVIGATION:
+           - Navigate to: Police > Registration for Driving Test.
+           - Look for text or cards containing "{test_type}"
+           - Select this option and click "Apply".
         
-        4. EXAM REGISTRATION DETAILS:
-           - DRIVING LICENSE DETAILS:
-             * License Type: "{exam_type}"
-             * National ID: {self.national_id}
-           
-           - TEST CENTER SELECTION:
-             * Location: {test_center or 'Default Nearest Center'}
-           
-           - PREFERRED EXAM DATE:
-             * Date: {preferred_date or 'Next Available'}
+        4. REGISTRATION DETAILS:
+           - For dropdown and radio button selections:
+             * Test Language: Click on the dropdown and select "English"
+             * District: Click dropdown and select "{district}"
+             * For radio buttons for test center, click directly on the radio button itself or its label
+             * For date selection, first click on the date field, then select the appropriate date
+           - When selecting available slots:
+             * Look for radio buttons or selectable cards showing available slots
+             * Click directly on the first available option
+             * Confirm the selection is highlighted or marked before proceeding
         
-        5. DOCUMENT PREPARATION:
-           - ENSURE FOLLOWING DOCUMENTS ARE READY:
-             * National ID (Digital/Physical Copy)
-             * Proof of Residence
-             * Passport-sized Photo
-             * Previous Driving Permit (if applicable)
+        5. SUMMARY AND SUBMISSION:
+           - Review the summary details.
+           - For notification selection:
+             * Look for radio buttons or checkboxes labeled "Phone" or "SMS"
+             * Click directly on the option or its label text
+           - Enter phone number: {self.phone_number}
+           - For certification checkbox:
+             * Look for checkbox at bottom containing text about certifying information
+             * Click directly on the checkbox element itself (not just the text)
+             * Verify the checkbox is checked (shows checkmark or filled)
+           - Click the SUBMIT button.
         
-        6. EXAM REGISTRATION STEPS:
-           - Fill out all required personal information
-           - Upload necessary documents
-           - Verify all entered information
-           - Pay registration fee
-           - Confirm exam slot and details
-        
-        7. FINAL SUBMISSION:
-           - Carefully review ALL entered information
-           - Verify each field's accuracy
-           - MOST IMPORTANT: check the box for certifying that all information provided is true
-           - PREPARE for potential payment
-           
-        CRITICAL TROUBLESHOOTING:
-        - IF ANY STEP FAILS:
-          * Stop immediately
-          * Screenshot the error
-          * Report exact error message
-          * DO NOT auto-proceed without human intervention
-        
-        PERFORMANCE INSTRUCTIONS:
-        - Proceed SLOWLY and METICULOUSLY
-        - Read EVERY screen thoroughly
-        - Anticipate potential website complexities
-        PLEASE DON'T OPEN ANY OTHER TAB JUST STAY ON THE WEBSITE UNTIL THE TASK IS DONE
+        HANDLING DIFFICULT ELEMENTS:
+           - If unable to click a checkbox or radio button directly, try:
+             * Clicking the element's label or text
+             * Using JavaScript to check the element
+             * Clicking slightly above or to the side of the visible checkbox
+           - For hidden or dynamically loaded elements:
+             * Wait for elements to be fully loaded and visible
+             * Scroll to make sure the element is in view
+             * Try clicking multiple times with short pauses between attempts
         """
         
-        # Enhanced Agent Configuration
+        # Pass the task to the Agent instance
         agent = Agent(
             task=task,
             llm=self.llm,
-            browser=self.browser
+            # browser=self.browser,
+            #verbose=self.verbose
         )
         
         results = await agent.run()
-        print(results)
+        if self.verbose:
+            print(results)
+        # Close the browser properly after finishing the task
         await self.browser.close()
+        with open("schema.json", "w") as json_file:
+            json.dump(self.schema, json_file, indent=4)
         return results
 
     def run_async(self, coroutine):
         """
-        Helper method to run async methods from synchronous code."""
+        Helper method to run async methods from synchronous code.
+        """
         return asyncio.run(coroutine)
+    
 
 if __name__ == "__main__":
     # Create the agent 
-    agent = BrowserUseAgent()
+    agent = BrowserUseAgent(verbose=True, headless=False)  # Set headless=False to see the browser
     
-    # # Option 1: Register for driving license exam
-    # result = agent.run_async(
-    #     agent.register_driving_license_exam(
-    #         exam_type="B",
-    #         test_center={"District": "Gasabo", "Sector": "Remera"},
-    #         preferred_date="2024-07-15"
-    #     )
-    # )
-    
-    # print("Driving License Exam Registration completed with result:", result)
-    
-    #Option 2: Apply for birth certificate (kept for reference)
+    # Option 1: Register for driving license exam
     result = agent.run_async(
-        agent.apply_for_birth_certificate(
-            for_self=True,
-            processing_office={"District": "Gasabo", "Sector": "Jali"},
-            reason="Education"
+        agent.register_driving_license_exam(
+            test_type="Registration for Driving Test - Provisional, paper-based",
+            district="Gasabo",
+            preferred_date="2025-07-15"
         )
     )
-    print("Application completed with result:", result)
+    
+    print("Driving License Exam Registration completed with result:", result)
+    
+    # Option 2: Apply for birth certificate (kept for reference)
+    # result = agent.run_async(
+    #     agent.apply_for_birth_certificate(
+    #         for_self=True,
+    #         processing_office={"District": "Gasabo", "Sector": "Jali"},
+    #         reason="Education"
+    #     )
+    # )
+    # print("Application completed with result:", result)

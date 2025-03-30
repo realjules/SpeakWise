@@ -1,0 +1,58 @@
+[
+    {
+        "path": "/id_application/",
+        "method": "post",
+        "description": "This route is used for applying for a new national ID.",
+        "schema_name": "IDApplicationInfo",
+        "fields": [
+            "childID",
+            "biometricSector",
+            "biometricDate",
+            "placeOfCollection",
+            "phone"
+        ],
+        "required_fields": [
+            "childID",
+            "biometricSector",
+            "biometricDate",
+            "placeOfCollection",
+            "phone"
+        ]
+    },
+    {
+        "path": "/get_id_application/",
+        "method": "get",
+        "description": "Retrieve all national ID application submissions",
+        "schema_name": "None",
+        "fields": [],
+        "required_fields": []
+    },
+    {
+        "path": "/id_correction/",
+        "method": "post",
+        "description": "This route is used for applying for a national ID correction.",
+        "schema_name": "IDCorrectionInfo",
+        "fields": [
+            "identificationDocumentNumber",
+            "placeOfCollection",
+            "reasonForIDCorrection",
+            "districtProcessingOffice",
+            "phone"
+        ],
+        "required_fields": [
+            "identificationDocumentNumber",
+            "placeOfCollection",
+            "reasonForIDCorrection",
+            "districtProcessingOffice",
+            "phone"
+        ]
+    },
+    {
+        "path": "/get_id_correction/",
+        "method": "get",
+        "description": "This route is used for displaying ID correction requests",
+        "schema_name": "None",
+        "fields": [],
+        "required_fields": []
+    }
+]

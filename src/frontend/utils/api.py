@@ -791,6 +791,67 @@ class APIClient:
         })
         
         return call
+        
+    def simulate_call_progress_with_response(self, call_id: str, message: str, ai_response: str) -> Optional[Dict[str, Any]]:
+        """
+        Simulate progress on a call with a specific AI response (for OpenAI integration).
+        
+        Args:
+            call_id: ID of the call to update
+            message: User message to add
+            ai_response: AI response to add
+            
+        Returns:
+            Updated call data or None if call not found
+        """
+        calls_data = self._load_calls()
+        
+        # Find call
+        call = next((c for c in calls_data["active_calls"] if c["id"] == call_id), None)
+        if not call:
+            return None
+        
+        # Update call
+        call["duration"] += 30
+        
+        # Add user message if provided
+        if message:
+            call["transcript"].append({
+                "role": "user",
+                "content": message,
+                "timestamp": datetime.now().isoformat()
+            })
+        
+        # Add AI response
+        call["transcript"].append({
+            "role": "system",
+            "content": ai_response,
+            "timestamp": datetime.now().isoformat()
+        })
+        
+        # Update step
+        if call["current_step"] < call["total_steps"]:
+            call["current_step"] += 1
+        
+        # Add AI action
+        call["ai_actions"].append({
+            "timestamp": datetime.now().isoformat(),
+            "action": f"Process Step {call['current_step']}",
+            "details": f"Processing data for {call['service']}, step {call['current_step']}",
+            "success": True,
+            "duration": random.randint(2, 5)
+        })
+        
+        # Save updated data
+        self._save_calls(calls_data)
+        
+        # Queue WebSocket event
+        self.queue_ws_message({
+            "type": "call.update",
+            "call": call
+        })
+        
+        return call
     
     def simulate_end_call(self, call_id: str, success: bool = True) -> bool:
         """

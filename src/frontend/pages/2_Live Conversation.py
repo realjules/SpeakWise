@@ -1,4 +1,10 @@
 import streamlit as st
+st.set_page_config(
+    page_title="Live Conversation | SpeakWise",
+    page_icon="🗣️",
+    layout="wide"
+)
+
 import time
 from datetime import datetime, timedelta
 import random
@@ -12,11 +18,73 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from utils import get_api_client, get_ws_manager, initialize_ws_connection, get_latest_ws_messages
 
-st.set_page_config(
-    page_title="Live Conversation | SpeakWise",
-    page_icon="🗣️",
-    layout="wide"
-)
+# Import OpenAI helper - use current directory path
+try:
+    # Get the current file's directory
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    sys.path.append(current_dir)  # Add current directory to path
+    
+    # Try to import directly first
+    try:
+        from openai_helper import generate_ai_response, is_openai_available
+        OPENAI_AVAILABLE = is_openai_available()
+    except ImportError:
+        # If that fails, try with the full path
+        openai_helper_path = os.path.join(current_dir, "openai_helper.py")
+        import importlib.util
+        spec = importlib.util.spec_from_file_location("openai_helper", openai_helper_path)
+        openai_helper = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(openai_helper)
+        
+        # Get the functions
+        generate_ai_response = openai_helper.generate_ai_response
+        is_openai_available = openai_helper.is_openai_available
+        OPENAI_AVAILABLE = is_openai_available()
+except Exception as e:
+    st.warning(f"OpenAI helper not available: {str(e)}")
+    OPENAI_AVAILABLE = False
+    
+    # Fallback function if the import fails
+    def generate_ai_response(user_message, service_type):
+        """Fallback generate_ai_response function"""
+        service_responses = {
+            "Business Registration": [
+                "What type of business is this?",
+                "Please provide your business address.",
+                "What's your full name as the business owner?",
+                "Please provide your national ID number.",
+                "I'll now process your business registration. This will take a moment."
+            ],
+            "Marriage Certificate": [
+                "What is your partner's full name?",
+                "When do you plan to have the ceremony?",
+                "Please provide your national ID number.",
+                "Please provide your partner's national ID number.",
+                "I'll now process your marriage certificate application."
+            ],
+            "Land Transfer": [
+                "Who are you transferring the land to?",
+                "Please provide your national ID number.",
+                "Please provide the recipient's national ID number.",
+                "What is the land title number?",
+                "I'll now process your land transfer request."
+            ],
+            "Passport Application": [
+                "Please provide your date of birth.",
+                "What is your current address?",
+                "Is this your first passport or a renewal?",
+                "We'll need your photo. Have you prepared a digital passport photo?",
+                "I'll now process your passport application."
+            ]
+        }
+        
+        responses = service_responses.get(service_type, 
+            ["I need some more information.", "Please provide additional details.", 
+             "Thank you. Just a few more questions.", "Almost done. One last question.",
+             "I'll now process your request."])
+        
+        # Pick a response based on the step or random
+        return random.choice(responses)
 
 st.markdown("""
 <style>
@@ -546,10 +614,19 @@ with left_col:
             demo_service = st.selectbox("Service Type", 
                 ["Business Registration", "Marriage Certificate", "Land Transfer", "Passport Application"])
             
+            # Add OpenAI toggle
+            use_openai = st.checkbox("Use OpenAI for responses", value=OPENAI_AVAILABLE, disabled=not OPENAI_AVAILABLE)
+            if not OPENAI_AVAILABLE:
+                st.caption("OpenAI integration not available. Check your API key configuration.")
+            
             # Submit button
             submitted = st.form_submit_button("Simulate New Call")
             if submitted:
                 new_call = api_client.simulate_incoming_call(demo_phone, demo_service)
+                
+                # Store OpenAI preference in session state
+                st.session_state.use_openai = use_openai and OPENAI_AVAILABLE
+                
                 st.success(f"New call simulated: {new_call['id']}")
                 
                 # Select the new call
@@ -696,9 +773,29 @@ with right_col:
                 # Custom message input
                 st.markdown("### Add Custom User Message")
                 custom_message = st.text_input("Enter user message:", key="live_custom_message")
+                
+                # Check if OpenAI is enabled in session state
+                use_openai = st.session_state.get("use_openai", False) and OPENAI_AVAILABLE
+                
                 if st.button("Send Message", key="live_send_message"):
                     if custom_message:
-                        updated_call = api_client.simulate_call_progress(call_data["id"], custom_message)
+                        if use_openai:
+                            # Generate AI response using OpenAI
+                            with st.spinner("Generating AI response..."):
+                                ai_response = generate_ai_response(
+                                    custom_message, 
+                                    call_data["service"]
+                                )
+                                # Use the API client's method to update with both message and response
+                                updated_call = api_client.simulate_call_progress_with_response(
+                                    call_data["id"], 
+                                    custom_message,
+                                    ai_response
+                                )
+                        else:
+                            # Use the original simulation
+                            updated_call = api_client.simulate_call_progress(call_data["id"], custom_message)
+                            
                         if updated_call:
                             st.session_state.live_call_data = updated_call
                             st.experimental_rerun()
@@ -717,6 +814,87 @@ with right_col:
             if auto_refresh and call_data["status"] == "Active":
                 time.sleep(3)  # Wait 3 seconds
                 st.experimental_rerun()
+                
+            # Add OpenAI Voice Interface if available
+            if OPENAI_AVAILABLE and call_data["status"] == "Active":
+                st.markdown("---")
+                st.markdown("### Voice Integration")
+                
+                # Create a container for the voice interface
+                voice_container = st.container()
+                
+                with voice_container:
+                    col1, col2 = st.columns(2)
+                    
+                    with col1:
+                        # Record audio button (simulated)
+                        if st.button("🎤 Record Voice", key="record_voice"):
+                            # In a real implementation, this would capture audio
+                            # For demo, we'll simulate it
+                            st.session_state.recording = True
+                            st.session_state.recording_time = time.time()
+                            st.info("Recording started... (simulation)")
+                    
+                    with col2:
+                        # Stop recording button
+                        if st.button("⏹️ Stop Recording", key="stop_recording", disabled="recording" not in st.session_state):
+                            # Simulate stop recording and processing
+                            if "recording" in st.session_state:
+                                # Calculate recording duration for realism
+                                duration = time.time() - st.session_state.recording_time
+                                
+                                # Show processing message
+                                with st.spinner(f"Processing audio ({duration:.1f}s)..."):
+                                    time.sleep(1)  # Simulate processing time
+                                    
+                                    # For demo - use predefined texts as if they were transcribed
+                                    transcribed_options = [
+                                        "I need help with applying for a birth certificate.",
+                                        "I would like to register for a driving license exam.",
+                                        f"I need assistance with my {call_data['service']} application.",
+                                        "Can you tell me what documents I need to provide?",
+                                        "When will my application be processed?"
+                                    ]
+                                    
+                                    transcribed_text = random.choice(transcribed_options)
+                                    
+                                    # In a real implementation, this would be:
+                                    # audio_file = "path_to_recorded_audio.wav"
+                                    # transcribed_text = speech_processor.transcribe(audio_file)
+                                    
+                                    st.session_state.transcribed_text = transcribed_text
+                                    
+                                # Clear recording state
+                                del st.session_state.recording
+                    
+                    # Show transcribed text if available
+                    if "transcribed_text" in st.session_state:
+                        st.markdown(f"**Transcribed:** {st.session_state.transcribed_text}")
+                        
+                        # Process button to send to AI
+                        if st.button("Send to AI", key="send_to_ai"):
+                            # Get the active call
+                            call_id = st.session_state.selected_live_call_id
+                            
+                            # Generate AI response
+                            with st.spinner("Generating AI response..."):
+                                ai_response = generate_ai_response(
+                                    st.session_state.transcribed_text, 
+                                    call_data["service"]
+                                )
+                                
+                                # Update call with transcribed text and AI response
+                                updated_call = api_client.simulate_call_progress_with_response(
+                                    call_id,
+                                    st.session_state.transcribed_text,
+                                    ai_response
+                                )
+                                
+                                if updated_call:
+                                    st.session_state.live_call_data = updated_call
+                                    # Clear transcribed text
+                                    del st.session_state.transcribed_text
+                                    st.experimental_rerun()
         else:
             st.warning(f"Call {st.session_state.selected_live_call_id} not found.")
             if st.button("Clear Selection"):

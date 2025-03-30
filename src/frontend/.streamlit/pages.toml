@@ -1,4 +1,0 @@
-[pages]
-Home = "pages/Home.py"
-"Call Monitor" = "pages/Call Monitor.py"
-"System Config" = "pages/System Config.py"

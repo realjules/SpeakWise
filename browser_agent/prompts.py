@@ -132,6 +132,7 @@ COMPREHENSIVE DRIVING LICENSE WRITTEN EXAM REGISTRATION PROCESS:
      * Verify the checkbox is checked (shows checkmark or filled)
    - Click the SUBMIT button (labeled "Ohereza" or "Saba" in Kinyarwanda).
 
+   
 ELEMENT SELECTION AND TROUBLESHOOTING TIPS:
    - If unable to click a checkbox or radio button directly, try:
      * Clicking the element's label or text

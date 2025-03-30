@@ -41,12 +41,54 @@
       ]
     },
     {
+      "id": "CALL-e45f",
+      "phone": "+25078d039042",
+      "service": "Business Registration",
+      "start_time": "2025-03-30T02:54:00.415576",
+      "duration": 0,
+      "status": "Active",
+      "current_step": 1,
+      "total_steps": 5,
+      "agent_id": "AGT-7db",
+      "ai_actions": [],
+      "success_rate": 100.0,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Hello, welcome to SpeakWise. How can I help you today?",
+          "timestamp": "2025-03-30T02:54:00.415576"
+        }
+      ]
+    },
+    {
+      "id": "CALL-d8bf",
+      "phone": "+25078884c5a9",
+      "service": "Business Registration",
+      "start_time": "2025-03-30T02:55:00.481133",
+      "duration": 0,
+      "status": "Active",
+      "current_step": 1,
+      "total_steps": 5,
+      "agent_id": "AGT-d88",
+      "ai_actions": [],
+      "success_rate": 100.0,
+      "transcript": [
+        {
+          "role": "system",
+          "content": "Hello, welcome to SpeakWise. How can I help you today?",
+          "timestamp": "2025-03-30T02:55:00.481133"
+        }
+      ]
+    }
+  ],
+  "recent_calls": [
+    {
       "id": "CALL-fe3e",
       "phone": "+25078f758a5b",
       "service": "Business Registration",
       "start_time": "2025-03-30T02:50:00.433811",
       "duration": 0,
-      "status": "Active",
+      "status": "Completed",
       "current_step": 1,
       "total_steps": 5,
       "agent_id": "AGT-2e6",
@@ -58,10 +100,9 @@
           "content": "Hello, welcome to SpeakWise. How can I help you today?",
           "timestamp": "2025-03-30T02:50:00.433811"
         }
-      ]
-    }
-  ],
-  "recent_calls": [
+      ],
+      "end_time": "2025-03-30T02:54:30.458239"
+    },
     {
       "id": "CALL-6830",
       "phone": "+25078f9fa257",
@@ -460,27 +501,6 @@
         }
       ],
       "end_time": "2025-03-30T02:12:30.248667"
-    },
-    {
-      "id": "CALL-4d09",
-      "phone": "+25078685e46c",
-      "service": "Business Registration",
-      "start_time": "2025-03-30T01:55:00.380135",
-      "duration": 0,
-      "status": "Completed",
-      "current_step": 1,
-      "total_steps": 5,
-      "agent_id": "AGT-4b6",
-      "ai_actions": [],
-      "success_rate": 100.0,
-      "transcript": [
-        {
-          "role": "system",
-          "content": "Hello, welcome to SpeakWise. How can I help you today?",
-          "timestamp": "2025-03-30T01:55:00.380135"
-        }
-      ],
-      "end_time": "2025-03-30T01:56:30.456788"
     }
   ]
 }

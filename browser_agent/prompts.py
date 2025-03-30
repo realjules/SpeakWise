@@ -130,8 +130,14 @@ COMPREHENSIVE DRIVING LICENSE WRITTEN EXAM REGISTRATION PROCESS:
      * Look for checkbox at bottom containing text about certifying information
      * Click directly on the checkbox element itself (not just the text)
      * Verify the checkbox is checked (shows checkmark or filled)
+     * PLEASE DON"T FORGET TO CHECK THIS CHECKBOX, SELECT THE WHOLE CONTAINER CONTAINING THAT CHECKBOX AND THEN CLICK ON THE CHECKBOX
+     TO CERTIFY THAT THE PROVIDED INFORMATION IS TRUE AND ACCURATE.
    - Click the SUBMIT button (labeled "Ohereza" or "Saba" in Kinyarwanda).
 
+6. PAYMENT PROCESS:
+   -please proceed with the payment process by using the following phone number {phone_number}
+   -If the phone number starts with 078/079 keep it to MTN mobile money other wise use Airtel. 
+   -After that finish the payment by clicking on PAY 500 or ishyura 500 in kinyarwanda 
    
 ELEMENT SELECTION AND TROUBLESHOOTING TIPS:
    - If unable to click a checkbox or radio button directly, try:

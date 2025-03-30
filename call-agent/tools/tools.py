@@ -121,29 +121,34 @@ if BROWSER_AGENT_AVAILABLE:
                 check=False
             )
             
-            # Format processing_office parameter
-            processing_office = {
-                "District": district,
-                "Sector": sector
+            # Log the output
+            logger.info(f"Browser agent output: {result.stdout}")
+            if result.stderr:
+                logger.error(f"Browser agent error: {result.stderr}")
+                
+            # Check if the execution was successful
+            if result.returncode != 0:
+                raise Exception(f"Browser agent execution failed with code {result.returncode}: {result.stderr}")
+                
+            # Process result - for now create a result structure similar to what the browser agent would return
+            browser_agent_result = {
+                "status": "success" if result.returncode == 0 else "error",
+                "service": "Birth Certificate",
+                "timestamp": datetime.now().isoformat(),
+                "output": result.stdout
             }
-            
-            # Call the browser agent method
-            result = await browser_agent.apply_for_birth_certificate(
-                for_self=for_self,
-                processing_office=processing_office,
-                reason=reason
-            )
             
             # Send result to chat UI
             await cl.Message(
-                content=f"✅ Birth certificate application submitted successfully!\n\nService: {result['service']}\nTimestamp: {result['timestamp']}"
+                content=f"✅ Birth certificate application submitted successfully!\n\nService: {browser_agent_result['service']}\nTimestamp: {browser_agent_result['timestamp']}\n\nOutput: {browser_agent_result['output'][:500]}..."
             ).send()
             
             return {
                 "status": "success",
                 "service": "Birth Certificate",
                 "timestamp": datetime.now().isoformat(),
-                "message": "Application submitted successfully"
+                "message": "Application submitted successfully",
+                "command_output": result.stdout
             }
             
         except Exception as e:
@@ -164,34 +169,75 @@ if BROWSER_AGENT_AVAILABLE:
     # Handler for driving license registration
     async def driving_license_handler(test_type, district, preferred_date=None):
         """
-        Handles driving license exam registration requests by delegating to the browser agent.
+        Handles driving license exam registration requests by directly running the browser agent script.
         """
         try:
-            # Create browser agent with minimal features (no analytics, no SMS)
-            browser_agent = BrowserUseAgent(
-                verbose=True, 
-                headless=True,
-                sms_enabled=False,
-                update_dashboard=False
+            # Direct execution of the browser_agent instead of creating an instance
+            import subprocess
+            import sys
+            import os
+            
+            # Get the absolute path to the browser_agent.py file
+            browser_agent_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../browser_agent/browser_agent.py'))
+            logger.info(f"Running browser agent script at: {browser_agent_script}")
+            
+            # Create command to run the script with arguments
+            command = [
+                sys.executable,  # Current Python interpreter
+                browser_agent_script,
+                "--test_type", test_type,
+                "--district", district
+            ]
+            
+            # Add optional preferred date if provided
+            if preferred_date:
+                command.extend(["--preferred_date", preferred_date])
+                
+            # Add additional flags
+            command.extend([
+                "--headless", "True",
+                "--update_dashboard", "False"
+            ])
+            
+            # Log the command we're about to run
+            logger.info(f"Executing command: {' '.join(command)}")
+            
+            # Run the browser_agent.py script as a subprocess
+            result = subprocess.run(
+                command, 
+                capture_output=True,
+                text=True,
+                check=False
             )
             
-            # Call the browser agent method
-            result = await browser_agent.register_driving_license_exam(
-                test_type=test_type,
-                district=district,
-                preferred_date=preferred_date
-            )
+            # Log the output
+            logger.info(f"Browser agent output: {result.stdout}")
+            if result.stderr:
+                logger.error(f"Browser agent error: {result.stderr}")
+                
+            # Check if the execution was successful
+            if result.returncode != 0:
+                raise Exception(f"Browser agent execution failed with code {result.returncode}: {result.stderr}")
+                
+            # Process result
+            browser_agent_result = {
+                "status": "success" if result.returncode == 0 else "error",
+                "service": "Driving License Exam",
+                "timestamp": datetime.now().isoformat(),
+                "output": result.stdout
+            }
             
             # Send result to chat UI
             await cl.Message(
-                content=f"✅ Driving license exam registration submitted successfully!\n\nService: {result['service']}\nTimestamp: {result['timestamp']}"
+                content=f"✅ Driving license exam registration submitted successfully!\n\nService: {browser_agent_result['service']}\nTimestamp: {browser_agent_result['timestamp']}\n\nOutput: {browser_agent_result['output'][:500]}..."
             ).send()
             
             return {
                 "status": "success",
                 "service": "Driving License Exam",
                 "timestamp": datetime.now().isoformat(),
-                "message": "Registration submitted successfully"
+                "message": "Registration submitted successfully",
+                "command_output": result.stdout
             }
             
         except Exception as e:

@@ -318,25 +318,66 @@ class BrowserUseAgent:
     
 
 if __name__ == "__main__":
-    # Create the agent 
-    agent = BrowserUseAgent(verbose=True, headless=False)  # Set headless=False to see the browser
+    import argparse
     
-    # Option 1: Apply for birth certificate
-    result = agent.run_async(
-        agent.apply_for_birth_certificate(
-            for_self=True,
-            processing_office={"District": "Gasabo", "Sector": "Jali"},
-            reason="Education"
-        )
+    # Parse command line arguments
+    parser = argparse.ArgumentParser(description='Browser agent for government services')
+    
+    # General arguments
+    parser.add_argument('--verbose', type=bool, default=True, help='Verbose output')
+    parser.add_argument('--headless', type=bool, default=True, help='Run browser in headless mode')
+    parser.add_argument('--sms_enabled', type=bool, default=False, help='Enable SMS notifications')
+    parser.add_argument('--update_dashboard', type=bool, default=False, help='Update dashboard analytics')
+    
+    # Birth certificate arguments
+    parser.add_argument('--for_self', type=str, help='Is the certificate for yourself (True/False)')
+    parser.add_argument('--district', type=str, help='District for processing office')
+    parser.add_argument('--sector', type=str, help='Sector for processing office')
+    parser.add_argument('--reason', type=str, help='Reason for certificate request')
+    
+    # Driving license arguments
+    parser.add_argument('--test_type', type=str, help='Type of driving test')
+    parser.add_argument('--preferred_date', type=str, help='Preferred date for exam')
+    
+    # Parse arguments
+    args = parser.parse_args()
+    
+    # Create the agent with parsed arguments
+    agent = BrowserUseAgent(
+        verbose=args.verbose, 
+        headless=args.headless,
+        sms_enabled=args.sms_enabled,
+        update_dashboard=args.update_dashboard
     )
-    print("Birth Certificate Application completed with result:", result)
     
-    # Option 2: Register for driving license exam (commented out)
-    # result = agent.run_async(
-    #     agent.register_driving_license_exam(
-    #         test_type="Registration for Driving Test - Provisional, paper-based",
-    #         district="Gasabo",
-    #         preferred_date="2025-07-15"
-    #     )
-    # )
-    # print("Driving License Exam Registration completed with result:", result)
+    # Determine which service to run based on arguments provided
+    if args.for_self is not None and args.district and args.sector and args.reason:
+        # Convert string 'True'/'False' to boolean
+        for_self = args.for_self.lower() == 'true'
+        
+        # Apply for birth certificate
+        processing_office = {"District": args.district, "Sector": args.sector}
+        result = agent.run_async(
+            agent.apply_for_birth_certificate(
+                for_self=for_self,
+                processing_office=processing_office,
+                reason=args.reason
+            )
+        )
+        print("Birth Certificate Application completed with result:", result)
+        
+    elif args.test_type and args.district:
+        # Register for driving license exam
+        result = agent.run_async(
+            agent.register_driving_license_exam(
+                test_type=args.test_type,
+                district=args.district,
+                preferred_date=args.preferred_date
+            )
+        )
+        print("Driving License Exam Registration completed with result:", result)
+        
+    else:
+        print("Error: Insufficient arguments provided. Please provide either:")
+        print("  For birth certificate: --for_self, --district, --sector, and --reason")
+        print("  For driving license: --test_type and --district")

@@ -46,15 +46,54 @@ async def setup_openai_realtime():
                 )
             if "transcript" in delta:
                 transcript = delta["transcript"]  # string, transcript added
-                pass
+                # Display transcript in the chat interface
+                if item and item.get("role") == "user":
+                    logger.info(f"User transcript: {transcript}")
+                elif item and item.get("role") == "assistant":
+                    logger.info(f"Assistant transcript: {transcript}")
             if "arguments" in delta:
                 arguments = delta["arguments"]  # string, function arguments added
                 pass
 
     async def handle_item_completed(item):
         """Used to populate the chat context with transcription once an item is completed."""
-        # print(item) # TODO
-        pass
+        if not item:
+            return
+            
+        # Display completed items in the chat for text tracking
+        try:
+            role = item.get("role")
+            formatted = item.get("formatted", {})
+            text = formatted.get("text", "")
+            transcript = formatted.get("transcript", "")
+            
+            # Only display if we have text or transcript content
+            if text or transcript:
+                content = text or transcript
+                
+                # For user messages, display what was said
+                if role == "user" and content:
+                    # Add "You said: " prefix to distinguish user messages
+                    await cl.Message(
+                        content=f"💬 **You said**: {content}",
+                        author="User",
+                        disable_feedback=True
+                    ).send()
+                
+                # For assistant messages, only display if no explicit message was sent
+                elif role == "assistant" and content:
+                    # Check if this is a new message that should be displayed
+                    if cl.user_session.get("last_assistant_text") != content:
+                        cl.user_session.set("last_assistant_text", content)
+                        
+                        # Use assistant author to distinguish system responses
+                        await cl.Message(
+                            content=content,
+                            author="Assistant",
+                            disable_feedback=True
+                        ).send()
+        except Exception as e:
+            logger.error(f"Error displaying completed item: {e}")
 
     async def handle_conversation_interrupt(event):
         """Used to cancel the client previous audio playback."""
@@ -79,10 +118,14 @@ async def setup_openai_realtime():
 
 @cl.on_chat_start
 async def start():
+    # Initialize session variables for tracking conversation
+    cl.user_session.set("last_assistant_text", "")
+    
     # Use our personality-driven introduction
     welcome_message = get_introduction()
     await cl.Message(
-        content=welcome_message
+        content=welcome_message,
+        author="Assistant"
     ).send()
     await setup_openai_realtime()
 
@@ -120,6 +163,10 @@ async def on_audio_start():
 @cl.on_audio_chunk
 async def on_audio_chunk(chunk: cl.InputAudioChunk):
     openai_realtime: RealtimeClient = cl.user_session.get("openai_realtime")
+    
+    # Set audio mode indicator in session to help with UI feedback
+    cl.user_session.set("audio_mode_active", True)
+    
     if openai_realtime and openai_realtime.is_connected():
         await openai_realtime.append_input_audio(chunk.data)
     else:

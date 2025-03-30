@@ -11,11 +11,18 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../.
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("call_agent_tools")
 
-# Import BrowserUseAgent class
+# Import browser_agent functionality
 try:
+    # Direct import of the browser_agent module
+    import sys
+    import os
+    # Add browser_agent directory to the path
+    browser_agent_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../browser_agent'))
+    sys.path.insert(0, browser_agent_path)
+    
     from browser_agent.browser_agent import BrowserUseAgent
     BROWSER_AGENT_AVAILABLE = True
-    logger.info("Browser agent successfully imported")
+    logger.info("Browser agent successfully imported from: " + browser_agent_path)
 except ImportError as e:
     BROWSER_AGENT_AVAILABLE = False
     logger.warning(f"Browser agent not available: {e}")
@@ -79,15 +86,39 @@ if BROWSER_AGENT_AVAILABLE:
     # Handler for birth certificate application
     async def birth_certificate_handler(for_self, district, sector, reason):
         """
-        Handles birth certificate application requests by delegating to the browser agent.
+        Handles birth certificate application requests by directly running the browser agent script.
         """
         try:
-            # Create browser agent with minimal features (no analytics, no SMS)
-            browser_agent = BrowserUseAgent(
-                verbose=True, 
-                headless=True,
-                sms_enabled=False,
-                update_dashboard=False
+            # Direct execution of the browser_agent instead of creating an instance
+            import subprocess
+            import sys
+            import os
+            
+            # Get the absolute path to the browser_agent.py file
+            browser_agent_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../browser_agent/browser_agent.py'))
+            logger.info(f"Running browser agent script at: {browser_agent_script}")
+            
+            # Create command to run the script with arguments
+            command = [
+                sys.executable,  # Current Python interpreter
+                browser_agent_script,
+                "--for_self", str(for_self),
+                "--district", district,
+                "--sector", sector,
+                "--reason", reason,
+                "--headless", "True",
+                "--update_dashboard", "False"
+            ]
+            
+            # Log the command we're about to run
+            logger.info(f"Executing command: {' '.join(command)}")
+            
+            # Run the browser_agent.py script as a subprocess
+            result = subprocess.run(
+                command, 
+                capture_output=True,
+                text=True,
+                check=False
             )
             
             # Format processing_office parameter
@@ -209,11 +240,13 @@ We currently ONLY support these two specific government services:
 
 1. **Birth Certificate Application**
    - Apply for your own birth certificate or for a child
-   - Process applications through the Irembo portal
+   - Our system will AUTOMATICALLY COMPLETE THE APPLICATION by navigating the Irembo website for you
+   - You just provide the required information, and our automated system handles the rest
 
 2. **Driving License Exam Registration**
    - Register for driving license written exams
-   - Choose your preferred testing location and date
+   - Our system will AUTOMATICALLY COMPLETE THE REGISTRATION by navigating the Irembo website for you
+   - You just provide the required information, and our automated system handles the rest
 
 ⚠️ NO OTHER SERVICES are available at this time. We cannot process business registrations, marriage certificates, national IDs, passports, or other government services yet.
 
@@ -245,25 +278,26 @@ async def birth_certificate_requirements_handler():
     Explains the EXACT requirements for birth certificate applications.
     """
     requirements_message = """
-# ⚠️ BIRTH CERTIFICATE APPLICATION - EXACT REQUIREMENTS
+# ⚠️ CRITICAL CORRECTION - BIRTH CERTIFICATE REQUIREMENTS
 
-We need EXACTLY these items to complete your birth certificate application:
+## ONLY THESE EXACT ITEMS ARE REQUIRED - DO NOT ASK FOR ANYTHING ELSE:
 
-## REQUIRED INFORMATION - NOTHING MORE, NOTHING LESS:
-1. **Phone Number**: Your Irembo account phone number
-2. **Password**: Your Irembo account password
-3. **For Self or Child**: Is this certificate for yourself (yes/no)?
-4. **National ID**: Your personal ID number
-5. **District**: Processing office district (e.g., Gasabo, Kicukiro)
-6. **Sector**: Processing office sector within that district (e.g., Jali, Gisozi)
-7. **Reason**: Purpose for certificate request (e.g., Education, Employment, Travel)
+1. ✅ **Phone Number**: Your Irembo account phone number (no country code)
+2. ✅ **Password**: Your Irembo account password
+3. ✅ **For Self or Child**: Is this certificate for yourself (yes/no)?
+4. ✅ **National ID**: Your personal ID number
+5. ✅ **District**: Processing office district (e.g., Gasabo, Kicukiro)
+6. ✅ **Sector**: Processing office sector within that district (e.g., Jali, Gisozi)
+7. ✅ **Reason**: Purpose for certificate request (e.g., Education, Employment, Travel)
 
-We do NOT need any other information such as:
-- Guardian name (not required)
-- Birth date (not required, already in your National ID)
-- Birth place (not required for this application)
-- Parent details (not required for this application)
-- Email address (optional, phone is sufficient)
+## ❌ DO NOT ASK FOR THESE - THEY ARE NOT NEEDED:
+- ❌ NO full name (not needed - extracted from National ID)
+- ❌ NO date of birth (not needed - extracted from National ID)
+- ❌ NO place of birth (not needed for this application)
+- ❌ NO parent names or details (not needed for this application)
+- ❌ NO guardian information (not needed for this application)
+
+The system uses ONLY the 7 required items listed above to complete the entire application process automatically.
 
 Would you like to proceed with a birth certificate application?
 """
@@ -291,24 +325,25 @@ async def driving_license_requirements_handler():
     Explains the EXACT requirements for driving license exam registration.
     """
     requirements_message = """
-# ⚠️ DRIVING LICENSE EXAM - EXACT REQUIREMENTS
+# ⚠️ CRITICAL CORRECTION - DRIVING LICENSE EXAM REQUIREMENTS
 
-We need EXACTLY these items to register you for a driving license exam:
+## ONLY THESE EXACT ITEMS ARE REQUIRED - DO NOT ASK FOR ANYTHING ELSE:
 
-## REQUIRED INFORMATION - NOTHING MORE, NOTHING LESS:
-1. **Phone Number**: Your Irembo account phone number
-2. **Password**: Your Irembo account password
-3. **Test Type**: "Registration for Driving Test - Provisional, paper-based"
-4. **Test Language**: English or Kinyarwanda
-5. **District**: Where you want to take the exam (e.g., Gasabo, Kicukiro)
-6. **Date Preference**: Optional - a preferred exam date if you have one
+1. ✅ **Phone Number**: Your Irembo account phone number (no country code)
+2. ✅ **Password**: Your Irembo account password
+3. ✅ **Test Type**: "Registration for Driving Test - Provisional, paper-based"
+4. ✅ **Test Language**: English or Kinyarwanda
+5. ✅ **District**: Where you want to take the exam (e.g., Gasabo, Kicukiro)
+6. ✅ **Date Preference**: Optional - a preferred exam date if you have one
 
-We do NOT need any other information such as:
-- Vehicle information (not required for exam registration)
-- Previous driving history (not required)
-- Medical information (not required at this stage)
-- Fingerprint or photo (not needed for registration)
-- Home address (not required for this registration)
+## ❌ DO NOT ASK FOR THESE - THEY ARE NOT NEEDED:
+- ❌ NO full name (not needed - extracted from account)
+- ❌ NO vehicle information (not needed for exam registration)
+- ❌ NO driving history (not needed for registration)
+- ❌ NO medical information (not needed at this stage)
+- ❌ NO home address (not needed for registration)
+
+The system uses ONLY the 6 required items listed above to complete the entire registration process automatically.
 
 Would you like to proceed with driving license exam registration?
 """
@@ -339,11 +374,66 @@ if BROWSER_AGENT_AVAILABLE:
     # Log available tools
     logger.info("Browser agent tools and information tools added to voice assistant")
 else:
-    # Add only information tools if browser agent is not available
+    # Create tool to inform user that automation is not available
+    automation_unavailable_def = {
+        "name": "inform_automation_unavailable",
+        "description": "Informs the user that automated form submission is currently unavailable",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "service_type": {
+                    "type": "string",
+                    "description": "The type of service being requested (birth_certificate or driving_license)",
+                }
+            },
+            "required": ["service_type"],
+        },
+    }
+    
+    async def automation_unavailable_handler(service_type):
+        """
+        Explains to the user that automated submission is currently unavailable.
+        """
+        service_name = "Birth Certificate" if service_type == "birth_certificate" else "Driving License Exam"
+        
+        unavailable_message = f"""
+# ⚠️ AUTOMATED SUBMISSION CURRENTLY UNAVAILABLE ⚠️
+
+I apologize, but the automated {service_name} submission system is currently offline due to a technical issue:
+```
+Browser agent not available: No module named 'browser_use'
+```
+
+### What this means:
+- The system can explain the requirements for {service_name}
+- The system can guide you through preparing the information needed
+- However, the system CANNOT automatically submit the application right now
+
+### Your options:
+1. I can still provide you with a complete list of requirements
+2. You can try again later when the system is fixed
+3. You can complete the application yourself on the Irembo website: https://irembo.gov.rw
+
+Would you like me to explain the requirements for {service_name} despite not being able to automatically submit it right now?
+"""
+        await cl.Message(content=unavailable_message).send()
+        
+        return {
+            "status": "unavailable",
+            "service": service_name,
+            "timestamp": datetime.now().isoformat(),
+            "reason": "Browser automation module not available"
+        }
+    
+    # Create tool tuple
+    automation_unavailable = (automation_unavailable_def, automation_unavailable_handler)
+    
+    # Add only information tools and unavailable notice if browser agent is not available
     tools = [
         list_available_services,
         birth_certificate_requirements,
-        driving_license_requirements
+        driving_license_requirements,
+        automation_unavailable
     ]
     
     # Log that browser agent tools are not available

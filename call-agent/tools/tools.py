@@ -13,19 +13,22 @@ logger = logging.getLogger("call_agent_tools")
 
 # Import browser_agent functionality
 try:
-    # Direct import of the browser_agent module
+    # Check if run_browser_agent.py script exists
     import sys
     import os
-    # Add browser_agent directory to the path
-    browser_agent_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../browser_agent'))
-    sys.path.insert(0, browser_agent_path)
     
-    from browser_agent.browser_agent import BrowserUseAgent
-    BROWSER_AGENT_AVAILABLE = True
-    logger.info("Browser agent successfully imported from: " + browser_agent_path)
-except ImportError as e:
+    # Check if run_browser_agent.py exists
+    run_script_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts/run_browser_agent.py'))
+    
+    if os.path.exists(run_script_path):
+        BROWSER_AGENT_AVAILABLE = True
+        logger.info(f"Browser agent script found at: {run_script_path}")
+    else:
+        BROWSER_AGENT_AVAILABLE = False
+        logger.warning(f"Browser agent script not found at: {run_script_path}")
+except Exception as e:
     BROWSER_AGENT_AVAILABLE = False
-    logger.warning(f"Browser agent not available: {e}")
+    logger.warning(f"Error checking browser agent availability: {e}")
 
 # No stock-related or chart tools - focusing only on government services
 
@@ -94,21 +97,24 @@ if BROWSER_AGENT_AVAILABLE:
             import sys
             import os
             
-            # Get the absolute path to the browser_agent.py file
-            browser_agent_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../browser_agent/browser_agent.py'))
-            logger.info(f"Running browser agent script at: {browser_agent_script}")
+            # Get the absolute path to the run_browser_agent.py script
+            run_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts/run_browser_agent.py'))
+            logger.info(f"Running browser agent script at: {run_script}")
             
             # Create command to run the script with arguments
             command = [
                 sys.executable,  # Current Python interpreter
-                browser_agent_script,
-                "--for_self", str(for_self),
+                run_script,
+                "--service", "birth_certificate",
                 "--district", district,
                 "--sector", sector,
                 "--reason", reason,
-                "--headless", "True",
-                "--update_dashboard", "False"
+                "--headless"
             ]
+            
+            # Add --for-self flag if true (it's a store_true flag, no value needed)
+            if for_self:
+                command.append("--for-self")
             
             # Log the command we're about to run
             logger.info(f"Executing command: {' '.join(command)}")
@@ -177,15 +183,16 @@ if BROWSER_AGENT_AVAILABLE:
             import sys
             import os
             
-            # Get the absolute path to the browser_agent.py file
-            browser_agent_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../browser_agent/browser_agent.py'))
-            logger.info(f"Running browser agent script at: {browser_agent_script}")
+            # Get the absolute path to the run_browser_agent.py script
+            run_script = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../scripts/run_browser_agent.py'))
+            logger.info(f"Running browser agent script at: {run_script}")
             
             # Create command to run the script with arguments
             command = [
                 sys.executable,  # Current Python interpreter
-                browser_agent_script,
-                "--test_type", test_type,
+                run_script,
+                "--service", "driving_license",
+                "--test-type", test_type,
                 "--district", district
             ]
             
@@ -260,7 +267,7 @@ if BROWSER_AGENT_AVAILABLE:
     driving_license = (driving_license_def, driving_license_handler)
     
     # Add browser agent tools to the tools list
-    tools = [query_stock_price, draw_plotly_chart, birth_certificate, driving_license]
+    # tools = [query_stock_price, draw_plotly_chart, birth_certificate, driving_license]
     
     # Create information tools regardless of browser agent availability
 
@@ -324,9 +331,9 @@ async def birth_certificate_requirements_handler():
     Explains the EXACT requirements for birth certificate applications.
     """
     requirements_message = """
-# ⚠️ CRITICAL CORRECTION - BIRTH CERTIFICATE REQUIREMENTS
+# ⚠️ BIRTH CERTIFICATE REQUIREMENTS
 
-## ONLY THESE EXACT ITEMS ARE REQUIRED - DO NOT ASK FOR ANYTHING ELSE:
+## ONLY THESE EXACT ITEMS ARE REQUIRED:
 
 1. ✅ **Phone Number**: Your Irembo account phone number (no country code)
 2. ✅ **Password**: Your Irembo account password
@@ -336,14 +343,7 @@ async def birth_certificate_requirements_handler():
 6. ✅ **Sector**: Processing office sector within that district (e.g., Jali, Gisozi)
 7. ✅ **Reason**: Purpose for certificate request (e.g., Education, Employment, Travel)
 
-## ❌ DO NOT ASK FOR THESE - THEY ARE NOT NEEDED:
-- ❌ NO full name (not needed - extracted from National ID)
-- ❌ NO date of birth (not needed - extracted from National ID)
-- ❌ NO place of birth (not needed for this application)
-- ❌ NO parent names or details (not needed for this application)
-- ❌ NO guardian information (not needed for this application)
-
-The system uses ONLY the 7 required items listed above to complete the entire application process automatically.
+The system uses ONLY these 7 required items to complete the entire application process automatically.
 
 Would you like to proceed with a birth certificate application?
 """

@@ -13,11 +13,11 @@ import argparse
 from datetime import datetime
 import json
 
-# Add the project root to the path to allow importing from src
+# Add the project root to the path to allow importing from project root
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 # Import the browser agent
-from src.browser_agent.browser_agent import BrowserUseAgent
+from browser_agent.browser_agent import BrowserUseAgent
 
 
 def parse_args():

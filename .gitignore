@@ -1,5 +1,6 @@
 # Environment variables
 .env
+agent_history.gif
 
 # Python
 __pycache__/

@@ -632,7 +632,7 @@ with left_col:
                 # Select the new call
                 st.session_state.selected_live_call_id = new_call['id']
                 st.session_state.live_call_data = new_call
-                st.experimental_rerun()
+                st.rerun()
     else:
         # List active calls
         for call in active_calls:
@@ -653,7 +653,7 @@ with left_col:
                 if st.button("View Conversation", key=f"view_call_{call['id']}"):
                     st.session_state.selected_live_call_id = call["id"]
                     st.session_state.live_call_data = call
-                    st.experimental_rerun()
+                    st.rerun()
                 
                 st.markdown("---")
         
@@ -669,7 +669,7 @@ with left_col:
             st.success(f"New call simulated: {new_call['id']}")
             st.session_state.selected_live_call_id = new_call['id']
             st.session_state.live_call_data = new_call
-            st.experimental_rerun()
+            st.rerun()
 
 with right_col:
     # Get selected call data
@@ -750,7 +750,7 @@ with right_col:
                         updated_call = api_client.simulate_call_progress(call_data["id"])
                         if updated_call:
                             st.session_state.live_call_data = updated_call
-                            st.experimental_rerun()
+                            st.rerun()
                 
                 with control_col2:
                     # End call successfully
@@ -759,7 +759,7 @@ with right_col:
                         if success:
                             st.success("Call completed successfully")
                             st.session_state.live_call_data["status"] = "Completed"
-                            st.experimental_rerun()
+                            st.rerun()
                 
                 with control_col3:
                     # End call with failure
@@ -768,7 +768,7 @@ with right_col:
                         if success:
                             st.error("Call ended with failure")
                             st.session_state.live_call_data["status"] = "Failed"
-                            st.experimental_rerun()
+                            st.rerun()
                 
                 # Custom message input
                 st.markdown("### Add Custom User Message")
@@ -798,7 +798,7 @@ with right_col:
                             
                         if updated_call:
                             st.session_state.live_call_data = updated_call
-                            st.experimental_rerun()
+                            st.rerun()
             
             # Refresh button
             if st.button("🔄 Refresh", key="refresh_convo"):
@@ -807,80 +807,123 @@ with right_col:
                     updated_call = api_client.get_call_details(call_data["id"])
                     if updated_call:
                         st.session_state.live_call_data = updated_call
-                st.experimental_rerun()
+                st.rerun()
                 
             # Auto-refresh
             auto_refresh = st.checkbox("Auto-refresh (every 3s)", value=False, key="auto_refresh")
             if auto_refresh and call_data["status"] == "Active":
                 time.sleep(3)  # Wait 3 seconds
-                st.experimental_rerun()
+                st.rerun()
                 
             # Add OpenAI Voice Interface if available
             if OPENAI_AVAILABLE and call_data["status"] == "Active":
                 st.markdown("---")
                 st.markdown("### Voice Integration")
                 
+                # Add this to src/frontend/pages/2_Live Conversation.py
+
+                # Replace the simulated recording with real microphone access
+                if "recording" not in st.session_state:
+                    st.session_state.recording = False
+                    st.session_state.audio_bytes = None
+
                 # Create a container for the voice interface
                 voice_container = st.container()
-                
+
                 with voice_container:
                     col1, col2 = st.columns(2)
                     
                     with col1:
-                        # Record audio button (simulated)
-                        if st.button("🎤 Record Voice", key="record_voice"):
-                            # In a real implementation, this would capture audio
-                            # For demo, we'll simulate it
-                            st.session_state.recording = True
-                            st.session_state.recording_time = time.time()
-                            st.info("Recording started... (simulation)")
-                    
-                    with col2:
-                        # Stop recording button
-                        if st.button("⏹️ Stop Recording", key="stop_recording", disabled="recording" not in st.session_state):
-                            # Simulate stop recording and processing
-                            if "recording" in st.session_state:
-                                # Calculate recording duration for realism
-                                duration = time.time() - st.session_state.recording_time
+                        # Real audio recording button
+                        if not st.session_state.recording:
+                            if st.button("🎤 Start Recording", key="start_recording"):
+                                st.session_state.recording = True
+                                st.rerun()
+                        else:
+                            st.button("⏹️ Stop Recording", key="stop_recording", 
+                                    help="Click to stop recording and process audio")
+                            st.markdown("**Recording... Speak now**")
+                            
+                            # Use streamlit-webrtc for real audio capture
+                            try:
+                                import streamlit_webrtc
                                 
-                                # Show processing message
-                                with st.spinner(f"Processing audio ({duration:.1f}s)..."):
-                                    time.sleep(1)  # Simulate processing time
+                                # Define audio processor
+                                def audio_processor(frame):
+                                    # Save the audio data
+                                    st.session_state.audio_bytes = frame.to_ndarray().tobytes()
+                                    return frame
+                                
+                                # Handle different versions of streamlit-webrtc
+                                try:
+                                    # Try newer API first
+                                    ctx = streamlit_webrtc.webrtc_streamer(
+                                        key="speech-to-text",
+                                        audio_processor_factory=lambda: audio_processor,
+                                        rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+                                        media_stream_constraints={"audio": True, "video": False},
+                                    )
+                                except Exception as api_error:
+                                    st.warning(f"Using alternative streamlit-webrtc configuration: {str(api_error)}")
+                                    # Try older API as fallback
+                                    try:
+                                        # Try legacy API without using WebRtcMode enum
+                                        ctx = streamlit_webrtc.webrtc_streamer(
+                                            key="speech-to-text-fallback",
+                                            audio_processor_factory=audio_processor,
+                                            rtc_configuration={"iceServers": [{"urls": ["stun:stun.l.google.com:19302"]}]},
+                                            media_stream_constraints={"audio": True, "video": False},
+                                        )
+                                    except Exception as e:
+                                        st.error(f"Audio recording requires an updated streamlit-webrtc package: {str(e)}")
+                                        ctx = None
+                                
+                                # When recording is stopped
+                                if ctx and hasattr(ctx, 'state') and hasattr(ctx.state, 'playing') and not ctx.state.playing and st.session_state.recording:
+                                    st.session_state.recording = False
                                     
-                                    # For demo - use predefined texts as if they were transcribed
-                                    transcribed_options = [
-                                        "I need help with applying for a birth certificate.",
-                                        "I would like to register for a driving license exam.",
-                                        f"I need assistance with my {call_data['service']} application.",
-                                        "Can you tell me what documents I need to provide?",
-                                        "When will my application be processed?"
-                                    ]
-                                    
-                                    transcribed_text = random.choice(transcribed_options)
-                                    
-                                    # In a real implementation, this would be:
-                                    # audio_file = "path_to_recorded_audio.wav"
-                                    # transcribed_text = speech_processor.transcribe(audio_file)
-                                    
-                                    st.session_state.transcribed_text = transcribed_text
-                                    
-                                # Clear recording state
-                                del st.session_state.recording
+                                    # Process the captured audio
+                                    if st.session_state.audio_bytes:
+                                        with st.spinner("Processing audio..."):
+                                            # Connect to OpenAI for transcription
+                                            if OPENAI_AVAILABLE:
+                                                # Create a temporary file with the audio bytes
+                                                import tempfile
+                                                with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as f:
+                                                    f.write(st.session_state.audio_bytes)
+                                                    temp_file = f.name
+                                                
+                                                # Initialize the speech processor
+                                                api_key = os.getenv("OPENAI_API_KEY")
+                                                processor = SpeechProcessor(api_key=api_key)
+                                                
+                                                # Transcribe the audio
+                                                transcribed_text = processor.transcribe(temp_file)
+                                                os.unlink(temp_file)  # Clean up temp file
+                                                
+                                                # Show transcribed text and enable sending to AI
+                                                if transcribed_text:
+                                                    st.session_state.transcribed_text = transcribed_text
+                                                    st.rerun()
+                                            else:
+                                                st.error("OpenAI is not available. Please check your API key.")
+                            except ImportError:
+                                st.error("Please install streamlit-webrtc: pip install streamlit-webrtc")
                     
                     # Show transcribed text if available
                     if "transcribed_text" in st.session_state:
-                        st.markdown(f"**Transcribed:** {st.session_state.transcribed_text}")
+                        st.markdown(f"**You said:** {st.session_state.transcribed_text}")
                         
                         # Process button to send to AI
                         if st.button("Send to AI", key="send_to_ai"):
-                            # Get the active call
-                            call_id = st.session_state.selected_live_call_id
-                            
                             # Generate AI response
                             with st.spinner("Generating AI response..."):
+                                call_id = st.session_state.selected_live_call_id
+                                service_type = call_data["service"] if "call_data" in locals() else "General Inquiry"
+                                
                                 ai_response = generate_ai_response(
                                     st.session_state.transcribed_text, 
-                                    call_data["service"]
+                                    service_type
                                 )
                                 
                                 # Update call with transcribed text and AI response
@@ -892,36 +935,26 @@ with right_col:
                                 
                                 if updated_call:
                                     st.session_state.live_call_data = updated_call
+                                    # Text-to-speech the response
+                                    try:
+                                        api_key = os.getenv("OPENAI_API_KEY")
+                                        processor = SpeechProcessor(api_key=api_key)
+                                        audio_response = processor.synthesize(ai_response)
+                                        
+                                        # Play the audio response
+                                        import base64
+                                        audio_bytes = base64.b64encode(audio_response).decode()
+                                        st.markdown(f"""
+                                        <audio autoplay>
+                                            <source src="data:audio/mp3;base64,{audio_bytes}" type="audio/mp3">
+                                        </audio>
+                                        """, unsafe_allow_html=True)
+                                    except Exception as e:
+                                        st.error(f"Error generating speech: {e}")
+                                    
                                     # Clear transcribed text
                                     del st.session_state.transcribed_text
-                                    st.experimental_rerun()
-        else:
-            st.warning(f"Call {st.session_state.selected_live_call_id} not found.")
-            if st.button("Clear Selection"):
-                if "selected_live_call_id" in st.session_state:
-                    del st.session_state.selected_live_call_id
-                if "live_call_data" in st.session_state:
-                    del st.session_state.live_call_data
-                st.experimental_rerun()
-    else:
-        # No call selected
-        st.image("https://via.placeholder.com/800x500?text=Select+a+call+to+view+conversation", width=800)
-        st.info("Select an active call from the left panel to view the conversation in real-time.")
-        
-        if not active_calls:
-            if st.button("Create Demo Call"):
-                # Phone number format +250XXXXXXXX
-                phone = f"+250{random.randint(700000000, 799999999)}"
-                service = random.choice([
-                    "Business Registration", "Marriage Certificate", 
-                    "Land Transfer", "Passport Application"
-                ])
-                new_call = api_client.simulate_incoming_call(phone, service)
-                st.success(f"New call simulated: {new_call['id']}")
-                st.session_state.selected_live_call_id = new_call['id']
-                st.session_state.live_call_data = new_call
-                st.experimental_rerun()
-
+                                    st.rerun()
 # Footer
 st.markdown("---")
 st.markdown("© 2023 SpeakWise | Last updated: " + datetime.now().strftime("%Y-%m-%d %H:%M:%S"))

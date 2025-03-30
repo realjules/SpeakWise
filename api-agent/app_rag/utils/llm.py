@@ -5,7 +5,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from .chroma_utils import *
 
-groq = ChatGroq(model="llama3-70b-8192", groq_api_key="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")
+groq = ChatGroq(model="llama3-70b-8192", groq_api_key="<GROQ API KEY>")
 
 
 # Helper function to call Groq LLM for chatbot responses

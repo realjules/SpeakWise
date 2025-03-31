@@ -52,7 +52,7 @@ class BrowserUseAgent:
             os.environ["OPENAI_API_KEY"] = api_key
             
         self.model = model
-        self.llm = ChatOpenAI(model=self.model, temperature=0.2)  # Slightly higher temperature for more adaptability
+        self.llm = ChatOpenAI(model=self.model, temperature=0.2, request_timeout=180)  # Set timeout for faster response
         self.verbose = verbose
         self.headless = headless
         

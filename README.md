@@ -59,7 +59,7 @@ graph TD
     class BrowserCore,Navigator,FormFiller,PaymentProc,DocCapture,Browser browser
     class Irembo,WhatsApp,UserWA external
     class DB database
-
+```
 
 
 ## Components

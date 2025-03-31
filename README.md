@@ -2,6 +2,10 @@
 
 The Irembo Voice AI Agent is structured around three main components that work together to enable phone-based access to government services.
 
+## Overview
+
+The Irembo Voice AI Agent is structured around three main components that work together to enable phone-based access to government services.
+
 ```mermaid
 graph TD
     User[User with Phone] -->|Makes call| TelSys[Telephony Interface]
@@ -60,7 +64,6 @@ graph TD
     class Irembo,WhatsApp,UserWA external
     class DB database
 ```
-
 
 ## Components
 
